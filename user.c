@@ -77,9 +77,7 @@ int main(int argc, char** argv) {
             n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
             if (n == -1) exit(1); //error
 
-            write(1, "echo: ", 6);
             write(1, buffer, n);
-            printf("\n");
             fflush(stdout);
 
         } else if (!strcmp(instruction, "request")){
@@ -87,9 +85,9 @@ int main(int argc, char** argv) {
             strcpy(instruction, "UNQ \0");
 
             scanf("%s", language);
-	
+
             strcat(instruction, language);
-            strcat(instruction, "\n");		
+            strcat(instruction, "\n");
 
             n = sendto(fd, instruction, strlen(instruction), 0, (struct sockaddr*)&addr, sizeof(addr));
             if (n == -1) exit(1); //error
@@ -98,9 +96,7 @@ int main(int argc, char** argv) {
             n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
             if (n == -1) exit(1); //error
 
-            write(1, "echo: ", 6);
             write(1, buffer, n);
-            printf("\n");
             fflush(stdout);
 
         } else {

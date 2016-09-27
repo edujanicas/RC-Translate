@@ -13,7 +13,7 @@ int main(int argc, char** argv) {
 	int fd, addrlen, ret, nread, port = 58000;
 	struct sockaddr_in addr;
 	char buffer[512];
-	char* response;
+	char response[2048];
 
 	if(argc != 1 && argc != 3) {
 		printf("Usage: ./TCS [-p TCSport]\n");
@@ -21,8 +21,6 @@ int main(int argc, char** argv) {
 	} else if (argc == 3) {
 		port = *argv[2];
 	}
-
-	response = malloc(512*sizeof(char));
 
 	if((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ) perror("Error creating socket");
 
@@ -42,7 +40,7 @@ int main(int argc, char** argv) {
 		if(nread == -1) perror("Error on receiving the message");
 
 		// DO STUFF
-		response = tcsCore(buffer);
+		strcpy(response, tcsCore(buffer));
 
 		// REPLY
 		ret = sendto(fd, response, strlen(response), 0, (struct sockaddr*)&addr, addrlen);

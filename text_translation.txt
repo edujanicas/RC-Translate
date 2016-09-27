@@ -1,0 +1,6 @@
+escola school
+mesa table
+cadeira chair
+quadro board
+caneta pen
+lapis pencil
