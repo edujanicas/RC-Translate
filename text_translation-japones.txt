@@ -1,0 +1,6 @@
+escola 学校
+mesa テーブル
+cadeira 椅子
+quadro ボード
+caneta ペン
+lapis 鉛筆
