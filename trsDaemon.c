@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
 		}
     }
 
-
+    strcpy(language, argv[1]);
 
 	if((old_handler = signal(SIGCHLD, SIG_IGN)) == SIG_ERR) exit(1);
 	
