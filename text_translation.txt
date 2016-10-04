@@ -4,3 +4,17 @@ cadeira chair
 quadro board
 caneta pen
 lapis pencil
+monitor monitor
+teclado keyboard
+rato mouse
+papel paper
+mochila bag
+estojo case
+livro book
+professor teacher
+aluno student
+quadro board
+aula class
+apagador eraser
+tinta ink
+pincel brush

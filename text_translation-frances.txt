@@ -4,3 +4,17 @@ cadeira chaise
 quadro planche
 caneta stylo
 lapis crayon
+monitor moniteur
+teclado clavier
+rato souris
+papel papier
+mochila cartable
+estojo cas
+livro livre
+professor professeur
+aluno élève
+quadro planche
+aula classe
+apagador gomme
+tinta encre
+pincel brosse
