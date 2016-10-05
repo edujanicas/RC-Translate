@@ -11,13 +11,14 @@
 
 int main(int argc, char** argv) {
 
-    int fd, n, addrlen;
+    int fd, n, addrlen, numLang, i = 1;
     struct sockaddr_in addr;
     struct hostent *hostptr;
     char buffer[128];
     char TCSname[32] = "localhost";
-    char instruction[32];
+    char instruction[32]; 
     char language[32];
+    char* token;
     int TCSport = 58000;
 
     // Argument reading
@@ -77,7 +78,16 @@ int main(int argc, char** argv) {
             n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
             if (n == -1) exit(1); //error
 
-            write(1, buffer, n);
+            if (strcmp(strtok(buffer, " "), "ULR")){
+                printf("TCS server error. Repeat request.");
+                break;
+            } 
+            numLang = atoi(strtok(NULL, " "));
+            while (i <= numLang){
+                token = strtok(NULL, " ");
+                printf("%d- %s\n", i, token);
+                i++;
+            }
             fflush(stdout);
 
         } else if (!strcmp(instruction, "request")){
@@ -95,8 +105,7 @@ int main(int argc, char** argv) {
             addrlen = sizeof(addr);
             n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
             if (n == -1) exit(1); //error
-
-            write(1, buffer, n);
+            write(1, buffer, n);            
             fflush(stdout);
 
         } else {
