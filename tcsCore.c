@@ -6,23 +6,20 @@ char* tcsCore(char* buffer) {
 
     char *instruction, *language, tmp[2048], reply[2048] = "ERR\n\0";
     char separator = ' ', *line = NULL;
-    
+
     FILE *trsServers;
     size_t len = 0;
     ssize_t read;
-    
+
     trsServers = fopen("languages.txt", "r");
     if (trsServers == NULL) {
         perror("Error opening trsServers.txt");
         exit(EXIT_FAILURE);
     }
-    
-    instruction = strtok(buffer, &separator);
 
     // Switch-Case cannot be used: C doens't support native string compairs
-    
-    if (!strcmp(instruction, "ULQ\n")) {
-        
+    if (!strcmp(buffer, "ULQ\n")) {
+
         /* If there was a query to the list of trsServers
           The response is of type ULR L1 L2 L3\n" */
         strcpy(reply, "ULR");
@@ -37,32 +34,58 @@ char* tcsCore(char* buffer) {
             strcat(reply, language);
         }
         strcat(reply, "\n"); // The reply must end with \n
-
     }
-    else if (!strcmp(instruction, "UNQ")) {
 
-        /* If there was a query to request a language
-          The response is of type UNR L1 IP1 PORT1\n" */
+    else {
 
-        strcpy(reply, "UNR");
-        instruction = strtok(NULL, &separator);
+      instruction = strtok(buffer, &separator);
 
-        /* The list of trsServers is on the trsServers.txt file.
-          The file is of type L1 IP1 PORT1
-                              L2 IP2 PORT2, and so on
-          We will only get the line of the requested language */
-        while ((read = getline(&line, &len, trsServers)) != -1) {
-            strcpy(tmp, line); // We save the line in a temporary buffer
-            language = strtok(line, &separator); // Then get the language
-            if (!strcmp(instruction, language)) { // If it's the required one
-                strcat(reply, " "); // Append a whitespace between words
-                strcat(reply, tmp);
-            }
-        }
-        strcat(reply, "\n"); // The reply must end with \n
+      if (!strcmp(instruction, "UNQ")) {
 
+          /* If there was a query to request a language
+            The response is of type UNR L1 IP1 PORT1\n" */
+
+          strcpy(reply, "UNR");
+          instruction = strtok(NULL, &separator);
+
+          /* The list of trsServers is on the trsServers.txt file.
+            The file is of type L1 IP1 PORT1
+                                L2 IP2 PORT2, and so on
+            We will only get the line of the requested language */
+          while ((read = getline(&line, &len, trsServers)) != -1) {
+              strcpy(tmp, line); // We save the line in a temporary buffer
+              language = strtok(line, &separator); // Then get the language
+              if (!strcmp(instruction, language)) { // If it's the required one
+                  strcat(reply, " "); // Append a whitespace between words
+                  strcat(reply, tmp);
+              }
+          }
+          strcat(reply, "\n"); // The reply must end with \n
+
+      } else if (!strcmp(instruction, "UNQ")) {
+
+          /* If there was request to add a language SRG language IPTRS portTRS\n
+            The response is of type SRR status\n" */
+
+          language = strtok(NULL, &separator);
+          strcpy(tmp, language);
+          strcat(tmp, " ");
+          strcat(tmp, strtok(NULL, &separator));
+          strcat(tmp, " ");
+          strcat(tmp, strtok(NULL, &separator));
+          strcat(tmp, "\n");
+
+          /* The list of trsServers is on the trsServers.txt file.
+            The file is of type L1 IP1 PORT1
+                                L2 IP2 PORT2, and so on
+          */
+          write(trsServers, tmp, strlen(tmp));
+
+          strcpy(reply, "SRR OK\n");
+          strcpy(reply, "SRR OK\n"); // The reply must end with \n
+      }
     }
-    
+
     fclose(trsServers);
     if (line) free(line);
 

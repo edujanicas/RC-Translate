@@ -23,7 +23,7 @@ int main(int argc, char** argv) {
     struct hostent *hostptr;
     char buffer[128];
     char TCSname[32] = "localhost";
-    char instruction[32]; 
+    char instruction[32];
     char languages[32][99];
     int TCSport = 58000;
 
@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
             if (strcmp(strtok(buffer, " "), "ULR")){
                 printf("TCS server error. Repeat request.");
                 break;
-            } 
+            }
             numLang = atoi(strtok(NULL, " "));
             while (i <= numLang){
                 strcpy(languages[i-1], strtok(NULL, " "));
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 
             addrlen = sizeof(addr);
             n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
-            if (n == -1) exit(1); //error 
+            if (n == -1) exit(1); //error
             connectTRS(buffer);
 
 
@@ -142,7 +142,7 @@ int connectTRS(char* message){
     char *ptr;
     char TRSname[32] = "localhost";
     char request[8] = "TRQ ";
-    char buffer[320]; 
+    char buffer[320];
     char words_str[320];
     char type[8];
     char* token;
@@ -154,8 +154,8 @@ int connectTRS(char* message){
     if (strcmp(strtok(message, " "), "UNR")){
         printf("TCS server error. Repeat request.");
         exit(1);
-    } 
-    
+    }
+
     strcpy(TRSname, strtok(NULL, " ")); // getting the IP address of TRS from message
     TRSport = atoi(strtok(NULL, " ")); // the TRS port from message
 
@@ -170,28 +170,28 @@ int connectTRS(char* message){
     printf("%s %d\n", TRSname, TRSport); // print TRS info
 
     memset(buffer, (int)'\0', 320); // initializing the buffer with /0
-    strcpy(buffer, request); 
+    strcpy(buffer, request);
 
     fgets(words_str, 319, stdin); // getting the info given by the user to send to TRS
     // fgets keeps the spaces !!!
 
     n = sscanf(words_str, "%s", type);
-    
+
     // the type has to be text(t) or file (f)
     if (!strcmp(type, "f")){
 
 
-    } 
+    }
 
     else if (!strcmp(type, "t")){
         nWords = countWords(words_str) - 1; // remove type from count
-        
+
         strcat(buffer, type);
         strcat(buffer, " ");
-        
+
         sprintf(type, "%d", nWords);
         strcat(buffer, type);
-        
+
         strcat(buffer, &words_str[2]);
     }
 
@@ -199,13 +199,13 @@ int connectTRS(char* message){
         printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
         return 1;
     }
-    
+
 
     ptr = buffer;
     nbytes = strlen(buffer);
-    
+
     nleft = nbytes;
-   
+
     while(nbytes > 0) {
         nwritten = write(fdTCP, ptr, nleft);
         if (nwritten <= 0) perror("Falha a enviar mensagem");
@@ -215,7 +215,7 @@ int connectTRS(char* message){
 
     memset(buffer, (int)'\0', 320); // initializing the buffer with /0
 
-    
+
     nleft = 320;
     ptr = buffer;
     while(nleft > 0) {
@@ -253,8 +253,8 @@ int countWords(char* s){
  {
   if (s[i] == ' ')
       foundLetter = False;
-  else 
-  {    
+  else
+  {
       if (foundLetter == False)
           count++;
       foundLetter = True;

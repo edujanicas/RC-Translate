@@ -21,10 +21,10 @@ int main(int argc, char** argv) {
 	} else if (argc == 3) {
 		port = *argv[2];
 	}
-    
+
 	if((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ) perror("Error creating socket");
 
-    memset((void*)&response, (int)'\0', sizeof(response));
+  memset((void*)&response, (int)'\0', sizeof(response));
 	memset((void*)&addr, (int)'\0', sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -39,10 +39,10 @@ int main(int argc, char** argv) {
 		addrlen = sizeof(addr);
 		nread = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
 		if(nread == -1) perror("Error on receiving the message");
-        printf("Received message from %s: %s", inet_ntoa(addr.sin_addr), buffer);
-        
+    printf("Received message from %s: %s", inet_ntoa(addr.sin_addr), buffer);
+
 		// PROCESS THE INPUT MESSEGE AND FILL THE RESULT IN RESPONSE
-        strcpy(response,tcsCore(buffer));
+    strcpy(response,tcsCore(buffer));
 
 		// REPLY
 		ret = sendto(fd, response, strlen(response), 0, (struct sockaddr*)&addr, addrlen);
