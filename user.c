@@ -12,6 +12,7 @@
 
 #define False 0
 #define True 1
+#define FileBufferSIZE 1000000
 
 int connectTRS(char* message);
 int countWords(char* s);
@@ -23,7 +24,7 @@ int main(int argc, char** argv) {
     struct hostent *hostptr;
     char buffer[128];
     char TCSname[32] = "localhost";
-    char instruction[32];
+    char instruction[32]; 
     char languages[32][99];
     int TCSport = 58000;
 
@@ -87,7 +88,7 @@ int main(int argc, char** argv) {
             if (strcmp(strtok(buffer, " "), "ULR")){
                 printf("TCS server error. Repeat request.");
                 break;
-            }
+            } 
             numLang = atoi(strtok(NULL, " "));
             while (i <= numLang){
                 strcpy(languages[i-1], strtok(NULL, " "));
@@ -109,7 +110,7 @@ int main(int argc, char** argv) {
 
             addrlen = sizeof(addr);
             n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
-            if (n == -1) exit(1); //error
+            if (n == -1) exit(1); //error 
             connectTRS(buffer);
 
 
@@ -137,16 +138,22 @@ int connectTRS(char* message){
 
     if ((old_handler = signal(SIGPIPE, SIG_IGN)) == SIG_ERR) exit(1); // Error
 
-    int fdTCP, n, nbytes, nleft, nwritten, nread, nWords, i=0;
+    int fdTCP, n, nbytes, nleft, nwritten, nread, nWords, size, sizeBuffer, i=0;
     struct sockaddr_in addr;
     char *ptr;
     char TRSname[32] = "localhost";
     char request[8] = "TRQ ";
-    char buffer[320];
-    char words_str[320];
+    char* buffer; 
+    char* fileStr;
+    char userInput[320];
     char type[8];
+    char nWordsStr[8];
+    char fileLengthStr[8];
     char* token;
     int TRSport = 59000;
+    FILE *file;
+    char filename[32];
+    int fileLength;
 
     fdTCP = socket(AF_INET, SOCK_STREAM, 0); // TCP Socket
     if (fdTCP == -1) perror("Failed initializing socket");
@@ -154,8 +161,8 @@ int connectTRS(char* message){
     if (strcmp(strtok(message, " "), "UNR")){
         printf("TCS server error. Repeat request.");
         exit(1);
-    }
-
+    } 
+    
     strcpy(TRSname, strtok(NULL, " ")); // getting the IP address of TRS from message
     TRSport = atoi(strtok(NULL, " ")); // the TRS port from message
 
@@ -169,78 +176,147 @@ int connectTRS(char* message){
 
     printf("%s %d\n", TRSname, TRSport); // print TRS info
 
-    memset(buffer, (int)'\0', 320); // initializing the buffer with /0
-    strcpy(buffer, request);
-
-    fgets(words_str, 319, stdin); // getting the info given by the user to send to TRS
+    fgets(userInput, 319, stdin); // getting the info given by the user to send to TRS
     // fgets keeps the spaces !!!
 
-    n = sscanf(words_str, "%s", type);
-
+    n = sscanf(userInput, "%s", type);
+    
     // the type has to be text(t) or file (f)
     if (!strcmp(type, "f")){
+        n = sscanf(userInput, "%s" "%s", type, filename); // get the filename
 
+        //open the image file in binary
+        if ((file = fopen(filename, "rb")) == NULL){ 
+            printf("Error opening file\n");
+            exit(1);} // error
 
-    }
+        fseek(file, 0, SEEK_END); // Seek to the end of the file 
+        fileLength = ftell(file); // Get the size from the end position
+        rewind(file);             // Go back to the start of the file
 
-    else if (!strcmp(type, "t")){
-        nWords = countWords(words_str) - 1; // remove type from count
+        size = FileBufferSIZE;
+        buffer = (char*) malloc (sizeof(char)*size);
+        fileStr = (char*) malloc (sizeof(char)*fileLength);
+        memset(buffer, (int)'\0', size); // initializing the buffer with /0
 
+        strcpy(buffer, request); // put the request code in the buffer     
         strcat(buffer, type);
         strcat(buffer, " ");
+        strcat(buffer, filename);
+        strcat(buffer, " ");
+        sprintf(fileLengthStr, "%d", fileLength);      
+        strcat(buffer, fileLengthStr);
+        strcat(buffer, " ");
 
-        sprintf(type, "%d", nWords);
+        if ((nWords= fread(fileStr, 1, fileLength, file)) != fileLength) { // Reads, stores in buffer and returns the total number of elements successfully read
+            printf("Error reading file");
+            exit(1); //error reading file
+        } 
+        sizeBuffer = strlen(buffer) + fileLength + 1;
+        strcat(buffer, fileStr);
+        strcat(buffer, "\n");
+
+
+        } 
+
+    else if (!strcmp(type, "t")){
+        nWords = countWords(userInput) - 1; // remove type from count
+        size = 320;
+        buffer = (char*) malloc (sizeof(char)*size);
+        memset(buffer, (int)'\0', size); // initializing the buffer with /0
+
+        strcpy(buffer, request); // put the request code in the buffer     
         strcat(buffer, type);
+        strcat(buffer, " ");
+        
 
-        strcat(buffer, &words_str[2]);
+
+        sprintf(nWordsStr, "%d", nWords);
+        strcat(buffer, nWordsStr);
+        
+        strcat(buffer, &userInput[2]);
+        sizeBuffer = strlen(buffer);
     }
 
     else{
         printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
         return 1;
     }
-
-
+        
     ptr = buffer;
-    nbytes = strlen(buffer);
-
+    nbytes = sizeBuffer;
+    
     nleft = nbytes;
-
+   
     while(nbytes > 0) {
         nwritten = write(fdTCP, ptr, nleft);
         if (nwritten <= 0) perror("Falha a enviar mensagem");
         nbytes -= nwritten;
         ptr += nwritten;
     }
+    printf("Sent.\n");
+    nleft = size;
+    memset(buffer, (int)'\0', size); // initializing the buffer with /0
 
-    memset(buffer, (int)'\0', 320); // initializing the buffer with /0
 
-
-    nleft = 320;
     ptr = buffer;
     while(nleft > 0) {
         nread = read(fdTCP, ptr, nleft);
+        printf("%d\n", nread );
         if (nread == -1) perror("Falha a ler mensagem");
         else if (nread == 0) break; // Closed by peer
         nleft -= nread;
         ptr += nread;
     }
+    if (nleft <= 0 || !(buffer)){
+        printf("Not able to receive all data. Repeat request.\n");
+        return 1;
+    }
 
-    strcpy(words_str, buffer);
+    printf("Received.\n");
 
-    memset(buffer, (int)'\0', 320); // initializing the buffer with /0
+    if (!strcmp(type, "f")){
 
-    token = strtok(words_str, " "); // use this to check for error
-    token = strtok(NULL, " "); // ditch the type
-    token = strtok(NULL, " "); // ditch the numWords
+        token = strtok(buffer, " "); // request: use this to check for error
+        token = strtok(NULL, " "); // ditch the type
+        strcpy(filename, strtok(NULL, " ")); // get the filename
+        size = atoi(strtok(NULL, " ")); // get the file size 
+    
+        file = fopen(filename, "wb");
+        fwrite(strtok(NULL, " "), 1, size, file);
+        fclose(file);
 
-    while (i < nWords){
-                strcat(buffer, strtok(NULL, " "));
-                strcat(buffer, " ");
-                i++;
-            }
+    } 
 
-    printf("%s: %s \n", TRSname, buffer);
+    else if (!strcmp(type, "t")){
+        strcpy(userInput, buffer);
+
+        memset(buffer, (int)'\0', size); // initializing the buffer with /0
+
+        token = strtok(userInput, " "); // TRR 
+        
+        token = strtok(NULL, " "); // error message if present, if not, ditch the type
+        printf("%s\n", token );
+        if (!strcmp(token, "ERR\n")){              //Check for error
+            printf("Request is fucked. FUck you\n");
+            return 1;
+        }
+         else if (!strcmp(token, "NTA\n")){              //Check for error
+            printf("No translation. FUck you\n");
+            return 1;
+        }
+        token = strtok(NULL, " "); // ditch the numWords
+
+        while (i < nWords){
+                    strcat(buffer, strtok(NULL, " "));
+                    strcat(buffer, " ");
+                    i++;
+                }
+        printf("%s: %s \n", TRSname, buffer);
+        } 
+        
+
+    
 
     close(fdTCP);
     return 0;
@@ -253,8 +329,8 @@ int countWords(char* s){
  {
   if (s[i] == ' ')
       foundLetter = False;
-  else
-  {
+  else 
+  {    
       if (foundLetter == False)
           count++;
       foundLetter = True;
@@ -262,3 +338,4 @@ int countWords(char* s){
  }
  return count;
 }
+
