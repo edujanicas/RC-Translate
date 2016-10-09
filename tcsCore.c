@@ -11,7 +11,7 @@ char* tcsCore(char* buffer) {
     size_t len = 0;
     ssize_t read;
 
-    trsServers = fopen("languages.txt", "r");
+    trsServers = fopen("languages.txt", "a+");
     if (trsServers == NULL) {
         perror("Error opening trsServers.txt");
         exit(EXIT_FAILURE);
@@ -28,6 +28,7 @@ char* tcsCore(char* buffer) {
           The file is of type L1 IP1 PORT1
                               L2 IP2 PORT2, and so on
           We will only get the first word of each line */
+          rewind(trsServers);
         while ((read = getline(&line, &len, trsServers)) != -1) {
             language = strtok(line, " \n"); // language is the first component of a line
             strcat(reply, " "); // Append a whitespace between trsServers
@@ -52,7 +53,8 @@ char* tcsCore(char* buffer) {
             The file is of type L1 IP1 PORT1
                                 L2 IP2 PORT2, and so on
             We will only get the line of the requested language */
-          while ((read = getline(&line, &len, trsServers)) != -1) {
+            rewind(trsServers);
+            while ((read = getline(&line, &len, trsServers)) != -1) {
               strcpy(tmp, line); // We save the line in a temporary buffer
               language = strtok(line, " \n"); // Then get the language
               if (!strcmp(instruction, language)) { // If it's the required one
@@ -83,9 +85,9 @@ char* tcsCore(char* buffer) {
             The file is of type L1 IP1 PORT1
                                 L2 IP2 PORT2, and so on
           */
-          write(trsServers, tmp, strlen(tmp));
+          fwrite(tmp, strlen(tmp), 1, trsServers);
+          rewind(trsServers);
 
-          strcpy(reply, "SRR OK\n");
           strcpy(reply, "SRR OK\n"); // The reply must end with \n
       }
     }

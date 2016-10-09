@@ -8,6 +8,7 @@
 #include <string.h>
 #include <signal.h>
 #include <errno.h>
+#include <netdb.h>
 #include "trsCore.c"
 extern int errno;
 
@@ -88,6 +89,36 @@ int main(int argc, char** argv) {
   strcpy(language, argv[1]);
 
   if((old_handler = signal(SIGCHLD, SIG_IGN)) == SIG_ERR) exit(1);
+
+  // INFORM TCS THAT IS NOW TRANSLATING
+  fd = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
+  if (fd == -1) exit(1);
+
+  hostptr = gethostbyname(TCSname);
+  if(hostptr == NULL) {
+      perror("Could not find host");
+      exit(1);
+  }
+
+  memset((void*)&buffer, (int)'\0', sizeof(buffer));
+  memset((void*)&addr, (int)'\0', sizeof(addr));
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = ((struct in_addr *)(hostptr -> h_addr_list[0])) -> s_addr;
+  addr.sin_port = htons(TCSport);
+
+  strcpy(buffer, "SRG ");
+  strcat(buffer, language);
+  strcat(buffer, " 127.0.0.1 59000\n");
+  n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
+  if (n == -1) exit(1); //error
+
+  addrlen = sizeof(addr);
+
+  n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
+  if (n == -1) exit(1); //error
+
+  printf("%s\n", buffer);
+  // DONE
 
   if((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) perror("Error creating socket");
 

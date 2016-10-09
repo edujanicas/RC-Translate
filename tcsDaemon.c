@@ -36,6 +36,9 @@ int main(int argc, char** argv) {
 	while(1) {
 
 		// RECEIVE
+		memset((void*)&buffer, (int)'\0', sizeof(buffer));
+		memset((void*)&response, (int)'\0', sizeof(response));
+
 		addrlen = sizeof(addr);
 		nread = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
 		if(nread == -1) perror("Error on receiving the message");
