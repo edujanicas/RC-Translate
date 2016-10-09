@@ -5,7 +5,7 @@
 char* tcsCore(char* buffer) {
 
     char *instruction, *language, tmp[2048], reply[2048] = "ERR\n\0";
-    char separator = ' ', *line = NULL;
+    char *line = NULL;
 
     FILE *trsServers;
     size_t len = 0;
@@ -29,7 +29,7 @@ char* tcsCore(char* buffer) {
                               L2 IP2 PORT2, and so on
           We will only get the first word of each line */
         while ((read = getline(&line, &len, trsServers)) != -1) {
-            language = strtok(line, &separator); // language is the first component of a line
+            language = strtok(line, " \n"); // language is the first component of a line
             strcat(reply, " "); // Append a whitespace between trsServers
             strcat(reply, language);
         }
@@ -38,7 +38,7 @@ char* tcsCore(char* buffer) {
 
     else {
 
-      instruction = strtok(buffer, &separator);
+      instruction = strtok(buffer, " \n");
 
       if (!strcmp(instruction, "UNQ")) {
 
@@ -46,7 +46,7 @@ char* tcsCore(char* buffer) {
             The response is of type UNR L1 IP1 PORT1\n" */
 
           strcpy(reply, "UNR");
-          instruction = strtok(NULL, &separator);
+          instruction = strtok(NULL, " \n");
 
           /* The list of trsServers is on the trsServers.txt file.
             The file is of type L1 IP1 PORT1
@@ -54,25 +54,29 @@ char* tcsCore(char* buffer) {
             We will only get the line of the requested language */
           while ((read = getline(&line, &len, trsServers)) != -1) {
               strcpy(tmp, line); // We save the line in a temporary buffer
-              language = strtok(line, &separator); // Then get the language
+              language = strtok(line, " \n"); // Then get the language
               if (!strcmp(instruction, language)) { // If it's the required one
+                  language = strtok(NULL, " \n");
                   strcat(reply, " "); // Append a whitespace between words
-                  strcat(reply, tmp);
+                  strcat(reply, language);
+                  language = strtok(NULL, " \n");
+                  strcat(reply, " "); // Append a whitespace between words
+                  strcat(reply, language);
               }
           }
           strcat(reply, "\n"); // The reply must end with \n
 
-      } else if (!strcmp(instruction, "UNQ")) {
+      } else if (!strcmp(instruction, "SRG")) {
 
           /* If there was request to add a language SRG language IPTRS portTRS\n
             The response is of type SRR status\n" */
 
-          language = strtok(NULL, &separator);
+          language = strtok(NULL, " \n");
           strcpy(tmp, language);
           strcat(tmp, " ");
-          strcat(tmp, strtok(NULL, &separator));
+          strcat(tmp, strtok(NULL, " \n"));
           strcat(tmp, " ");
-          strcat(tmp, strtok(NULL, &separator));
+          strcat(tmp, strtok(NULL, " \n"));
           strcat(tmp, "\n");
 
           /* The list of trsServers is on the trsServers.txt file.
