@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 		// REPLY
 		ret = sendto(fd, response, strlen(response), 0, (struct sockaddr*)&addr, addrlen);
 		if(ret == -1) perror("Error echoing the answer");
-        printf("Sent message to %s: %s", inet_ntoa(addr.sin_addr), response);
+    printf("Sent message to %s: %s", inet_ntoa(addr.sin_addr), response);
 
 
 	}

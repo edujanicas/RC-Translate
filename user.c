@@ -254,20 +254,21 @@ int connectTRS(char* message){
         nbytes -= nwritten;
         ptr += nwritten;
     }
+
     printf("Sent.\n");
-    nleft = size;
+    nleft = nwritten; //FIXME
+
     memset(buffer, (int)'\0', size); // initializing the buffer with /0
-
-
     ptr = buffer;
-    while(nleft > 0) {
+
+    //while(nleft > 0) { //FIXME
         nread = read(fdTCP, ptr, nleft);
-        printf("%d\n", nread );
+        printf("%d\n", nread);
         if (nread == -1) perror("Falha a ler mensagem");
-        else if (nread == 0) break; // Closed by peer
+        else if (nread == 0) //break; // Closed by peer
         nleft -= nread;
         ptr += nread;
-    }
+    //}
     if (nleft <= 0 || !(buffer)){
         printf("Not able to receive all data. Repeat request.\n");
         return 1;
