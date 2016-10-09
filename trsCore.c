@@ -6,6 +6,7 @@ char* trsCore(char* buffer, char* language) {
 
     char *instruction, *word, reply[2048] = "ERR\n\0";
     char *line = NULL;
+    char *brkt, *brkb;
     char numberOfWordsStr[2];
     int numberOfWords, n;
 
@@ -13,11 +14,11 @@ char* trsCore(char* buffer, char* language) {
     size_t len = 0;
     ssize_t read;
 
-    instruction = strtok(buffer, " \n");
+    instruction = strtok_r(buffer, " \n", &brkt);
 
     if (!strcmp(instruction, "TRQ")) {
       // The user requests the TRS to translate the provided text words (t) or image file (f).
-      instruction = strtok(NULL, " \n");
+      instruction = strtok_r(NULL, " \n", &brkt);
 
       if (!strcmp(instruction, "t")) {
         // TRQ t N W1 W2 ... WN
@@ -33,21 +34,21 @@ char* trsCore(char* buffer, char* language) {
             exit(EXIT_FAILURE);
         }
 
-        strcpy(numberOfWordsStr, strtok(NULL, " \n"));
+        strcpy(numberOfWordsStr, strtok_r(NULL, " \n", &brkt));
         numberOfWords = atoi(numberOfWordsStr);
         strcat(reply, numberOfWordsStr);
 
         for(n = 0; n < numberOfWords; n++) {
 
-            instruction = strtok(NULL, " \n"); // instruction retains the word to be translated
+            instruction = strtok_r(NULL, " \n", &brkt); // instruction retains the word to be translated
 
             while ((read = getline(&line, &len, translation)) != -1) {
-                word = strtok(line, " \n"); // Then get the word
+                word = strtok_r(line, " \n", &brkb); // Then get the word
                 if (!strcmp(instruction, word)) { // If it's the required one
-                    word = strtok(NULL, " \n");
+                    word = strtok_r(NULL, " \n", &brkb);
                     strcat(reply, " "); // Append a whitespace between words
                     strcat(reply, word);
-                    continue;
+                    break;
                 }
             }
             rewind(translation); // Position the stream at the beggining of the file
@@ -63,7 +64,7 @@ char* trsCore(char* buffer, char* language) {
         }
       }
     }
-
+    printf("Exit Core with reply: %s\n", reply);
     fclose(translation);
     if (line) free(line);
 
