@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 
-char* tcsCore(char* buffer) {
+char* tcsCore(char* buffer, int* nServers) {
 
     char *instruction, *language, tmp[2048], reply[2048] = "ERR\n\0";
     char *line = NULL;
@@ -22,7 +22,9 @@ char* tcsCore(char* buffer) {
 
         /* If there was a query to the list of trsServers
           The response is of type ULR L1 L2 L3\n" */
-        strcpy(reply, "ULR");
+        strcpy(reply, "ULR ");
+        sprintf(tmp, "%d", *nServers);
+        strcat(reply, tmp);
 
         /* The list of trsServers is on the trsServers.txt file.
           The file is of type L1 IP1 PORT1
@@ -88,6 +90,7 @@ char* tcsCore(char* buffer) {
           fwrite(tmp, strlen(tmp), 1, trsServers);
           rewind(trsServers);
 
+          (*nServers)++;
           strcpy(reply, "SRR OK\n"); // The reply must end with \n
       }
     }

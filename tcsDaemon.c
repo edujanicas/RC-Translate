@@ -7,13 +7,27 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <unistd.h>
+#include <signal.h>
 #include "tcsCore.c"
+
+int fd;
+
+void* quitTCS() {
+	printf("Will now kill TCS\n");
+	close(fd);
+	exit(0);
+}
 
 int main(int argc, char** argv) {
 
-	int fd, addrlen, ret, nread, port = 58000;
+	int addrlen, ret, nread, port = 58000, *nServers;
 	struct sockaddr_in addr;
+	struct hostent *h;
+	struct in_addr *a;
 	char buffer[512], response[2048];
+	void (*old_handler)(int); //Interrupt handler
+
+	if((old_handler = signal(SIGINT, quitTCS))) exit(1);
 
 	if(argc != 1 && argc != 3) {
 		printf("Usage: ./TCS [-p TCSport]\n");
@@ -21,6 +35,21 @@ int main(int argc, char** argv) {
 	} else if (argc == 3) {
 		port = *argv[2];
 	}
+
+	nServers = (int*)malloc(sizeof(int));
+	*nServers = 0;
+
+	if(gethostname(buffer, 512)==-1) {
+		perror("Could not get host name");
+		exit(1);
+	}
+	printf("Official host name: %s\n", buffer);
+	if((h=gethostbyname(buffer))==NULL) {
+		perror("Could not get host IP");
+		exit(1);
+	}
+	a=(struct in_addr*)h->h_addr_list[0];
+	printf("Internet address: %s\n", inet_ntoa(*a));
 
 	if((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ) perror("Error creating socket");
 
@@ -45,7 +74,7 @@ int main(int argc, char** argv) {
     printf("Received message from %s: %s", inet_ntoa(addr.sin_addr), buffer);
 
 		// PROCESS THE INPUT MESSEGE AND FILL THE RESULT IN RESPONSE
-    strcpy(response,tcsCore(buffer));
+    strcpy(response,tcsCore(buffer, nServers));
 
 		// REPLY
 		ret = sendto(fd, response, strlen(response), 0, (struct sockaddr*)&addr, addrlen);
@@ -54,7 +83,5 @@ int main(int argc, char** argv) {
 
 
 	}
-
-	close(fd);
 	exit(0);
 }
