@@ -10,4 +10,4 @@ user : user.c
 	gcc user.c -o user
 
 clean :
-	rm TCS TRS user
+	rm TCS TRS user languages.txt
