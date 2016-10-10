@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
   strcpy(buffer, "SRG ");
   strcat(buffer, language);
-  strcat(buffer, " 127.0.0.1 59000\n");
+  strcat(buffer, " 192.168.128.1 59000\n");
   n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
   if (n == -1) exit(1); //error
 

@@ -248,27 +248,27 @@ int connectTRS(char* message){
 
     nleft = nbytes;
 
-    while(nbytes > 0) {
+    while(nleft > 0) {
         nwritten = write(fdTCP, ptr, nleft);
         if (nwritten <= 0) perror("Falha a enviar mensagem");
-        nbytes -= nwritten;
+        nleft -= nwritten;
         ptr += nwritten;
     }
 
     printf("Sent.\n");
-    nleft = nwritten; //FIXME
+    nleft = size;
 
     memset(buffer, (int)'\0', size); // initializing the buffer with /0
     ptr = buffer;
 
-    //while(nleft > 0) { //FIXME
+    while(nleft > 0) {
         nread = read(fdTCP, ptr, nleft);
         printf("%d\n", nread);
         if (nread == -1) perror("Falha a ler mensagem");
-        else if (nread == 0) //break; // Closed by peer
+        else if (nread == 0) break; // Closed by peer
         nleft -= nread;
         ptr += nread;
-    //}
+    }
     if (nleft <= 0 || !(buffer)){
         printf("Not able to receive all data. Repeat request.\n");
         return 1;
@@ -299,11 +299,11 @@ int connectTRS(char* message){
         token = strtok(NULL, " "); // error message if present, if not, ditch the type
         printf("%s\n", token );
         if (!strcmp(token, "ERR\n")){              //Check for error
-            printf("Request is fucked. FUck you\n");
+            printf("Error\n");
             return 1;
         }
          else if (!strcmp(token, "NTA\n")){              //Check for error
-            printf("No translation. FUck you\n");
+            printf("No translation.\n");
             return 1;
         }
         token = strtok(NULL, " "); // ditch the numWords
