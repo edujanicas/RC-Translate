@@ -8,6 +8,7 @@ void trsCore(char* buffer, char* reply ,char* language) {
     char *line = NULL;
     char *brkt, *brkb;
     char numberOfWordsStr[2];
+    char fileName[32];
     int numberOfWords, n;
 
     FILE *translation;
@@ -29,8 +30,11 @@ void trsCore(char* buffer, char* reply ,char* language) {
         // It can be assumed that each word (Wn) contains no more than 30 characters.
         // No more than 10 words are sent in each request instruction.
         strcpy(reply, "TRR t ");
-
-        translation = fopen("text_translation.txt", "r");
+	
+	strcpy(fileName, "text_translation-\0");
+	strcat(fileName, language);
+	strcat(fileName, ".txt\0");
+        translation = fopen(fileName, "r");
         if (translation == NULL) {
             perror("Error opening text_translation.txt");
             exit(EXIT_FAILURE);

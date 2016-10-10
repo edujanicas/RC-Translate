@@ -140,9 +140,6 @@ int main(int argc, char** argv) {
   n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
   if (n == -1) exit(1); //error
 
-  printf("%s\n", buffer);
-  // DONE
-
   if((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) perror("Error creating socket");
 
   memset((void*)&addr, (int)'\0', sizeof(addr));
@@ -158,6 +155,9 @@ int main(int argc, char** argv) {
   if(listen(fd, 5) == -1) perror("Failed to listen");
 
   while(1) {
+    
+    memset((void*)&buffer, (int)'\0', sizeof(buffer));
+    memset((void*)&response, (int)'\0', sizeof(response));
     addrlen = sizeof(addr);
     do newfd = accept(fd, (struct sockaddr*)&addr, &addrlen); //Wait for a connection
     while (newfd == -1 && errno == EINTR);
@@ -173,7 +173,7 @@ int main(int argc, char** argv) {
         trsCore(buffer, response, language);
         ptr = &response[0];
         n = strlen(response);
-        printf("Sent message to: %s: %s", inet_ntoa(addr.sin_addr), response);
+        printf("Sent message to: %s: %sSize: %d\n", inet_ntoa(addr.sin_addr), response, n);
         while (n > 0) {
           if ((nw = write(newfd, ptr, n)) <= 0) perror("Error retrieving message");
           n -= nw;
