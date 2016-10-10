@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-char* tcsCore(char* buffer, int* nServers) {
+void tcsCore(char* buffer, char* reply, int* nServers) {
 
-    char *instruction, *language, tmp[2048], reply[2048] = "ERR\n\0";
+    char *instruction, *language, tmp[2048];
     char *line = NULL;
 
     FILE *trsServers;
@@ -17,6 +17,7 @@ char* tcsCore(char* buffer, int* nServers) {
         exit(EXIT_FAILURE);
     }
 
+    strcpy(reply, "ERR\n\0");
     // Switch-Case cannot be used: C doens't support native string compairs
     if (!strcmp(buffer, "ULQ\n")) {
 
@@ -36,7 +37,7 @@ char* tcsCore(char* buffer, int* nServers) {
             strcat(reply, " "); // Append a whitespace between trsServers
             strcat(reply, language);
         }
-        strcat(reply, "\n"); // The reply must end with \n
+        strcat(reply, "\n"); // The reply[0]reply[0][0] must end with \n
     }
 
     else {
@@ -68,7 +69,7 @@ char* tcsCore(char* buffer, int* nServers) {
                   strcat(reply, language);
               }
           }
-          strcat(reply, "\n"); // The reply must end with \n
+          strcat(reply, "\n"); // The reply[0]reply[0][0] must end with \n
 
       } else if (!strcmp(instruction, "SRG")) {
 
@@ -89,14 +90,12 @@ char* tcsCore(char* buffer, int* nServers) {
           */
           fwrite(tmp, strlen(tmp), 1, trsServers);
           rewind(trsServers);
-
-          (*nServers)++;
-          strcpy(reply, "SRR OK\n"); // The reply must end with \n
+          *nServers += 1;
+         strcpy(reply, "SRR OK\n"); // The reply[0]reply[0][0] must end with \n
       }
     }
-
+    
     fclose(trsServers);
     if (line) free(line);
 
-    return reply;
 }

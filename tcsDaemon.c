@@ -12,7 +12,7 @@
 
 int fd;
 
-void* quitTCS() {
+static void quitTCS(int signo) {
 	printf("Will now kill TCS\n");
 	close(fd);
 	exit(0);
@@ -24,7 +24,8 @@ int main(int argc, char** argv) {
 	struct sockaddr_in addr;
 	struct hostent *h;
 	struct in_addr *a;
-	char buffer[512], response[2048];
+	char buffer[512];
+	char response[2048];
 	void (*old_handler)(int); //Interrupt handler
 
 	if((old_handler = signal(SIGINT, quitTCS))) exit(1);
@@ -35,8 +36,8 @@ int main(int argc, char** argv) {
 	} else if (argc == 3) {
 		port = *argv[2];
 	}
-
-	nServers = (int*)malloc(sizeof(int));
+	
+	nServers = malloc(sizeof(int));
 	*nServers = 0;
 
 	if(gethostname(buffer, 512)==-1) {
@@ -74,8 +75,7 @@ int main(int argc, char** argv) {
     printf("Received message from %s: %s", inet_ntoa(addr.sin_addr), buffer);
 
 		// PROCESS THE INPUT MESSEGE AND FILL THE RESULT IN RESPONSE
-    strcpy(response,tcsCore(buffer, nServers));
-
+    		tcsCore(buffer, response, nServers);
 		// REPLY
 		ret = sendto(fd, response, strlen(response), 0, (struct sockaddr*)&addr, addrlen);
 		if(ret == -1) perror("Error echoing the answer");

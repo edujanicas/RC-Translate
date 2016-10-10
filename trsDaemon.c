@@ -16,7 +16,7 @@ extern int errno;
 
 int fd;
 
-void* quitTRS() {
+static void quitTRS(int signo) {
 	printf("Will now kill TCS\n");
 	close(fd);
 	exit(0);
@@ -27,8 +27,8 @@ int main(int argc, char** argv) {
   int i, fd, n, addrlen, newfd, nw, ret;
   struct sockaddr_in addr;
   struct hostent *hostptr;
-	struct hostent *h;
-	struct in_addr *a;
+  struct hostent *h;
+  struct in_addr *a;
   char buffer[128];
   char response[2048] = "";
   char TCSname[32] = "localhost";
@@ -156,7 +156,6 @@ int main(int argc, char** argv) {
   }
 
   if(listen(fd, 5) == -1) perror("Failed to listen");
-  printf("Listening...\n");
 
   while(1) {
     addrlen = sizeof(addr);
@@ -169,18 +168,17 @@ int main(int argc, char** argv) {
     else if(pid == 0) { //Child process
       close(fd);
       while((n = read(newfd, buffer, 128)) != 0) {
-        printf("Received message: %s\n", buffer);
+        printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
         if (n == -1) perror("Error while reading the message");
-        strcpy(response, trsCore(buffer, language));
+        trsCore(buffer, response, language);
         ptr = &response[0];
         n = strlen(response);
-        printf("Sent message: %s Size: %d\n", ptr, n);
+        printf("Sent message to: %s: %s", inet_ntoa(addr.sin_addr), response);
         while (n > 0) {
           if ((nw = write(newfd, ptr, n)) <= 0) perror("Error retrieving message");
           n -= nw;
           ptr += nw;
         }
-        printf("Message sent\n");
       }
       close(newfd);
       exit(0);

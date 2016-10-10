@@ -2,9 +2,9 @@
 #include <string.h>
 #include <stdio.h>
 
-char* trsCore(char* buffer, char* language) {
+void trsCore(char* buffer, char* reply ,char* language) {
 
-    char *instruction, *word, reply[2048] = "ERR\n\0";
+    char *instruction, *word;
     char *line = NULL;
     char *brkt, *brkb;
     char numberOfWordsStr[2];
@@ -13,6 +13,8 @@ char* trsCore(char* buffer, char* language) {
     FILE *translation;
     size_t len = 0;
     ssize_t read;
+
+    strcpy(reply, "ERR\n\0");
 
     instruction = strtok_r(buffer, " \n", &brkt);
 
@@ -64,9 +66,6 @@ char* trsCore(char* buffer, char* language) {
         }
       }
     }
-    printf("Exit Core with reply: %s\n", reply);
     fclose(translation);
     if (line) free(line);
-
-    return reply;
 }
