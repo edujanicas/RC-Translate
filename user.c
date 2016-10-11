@@ -10,9 +10,10 @@
 #include <netdb.h>
 #include <signal.h>
 
-#define False 0
-#define True 1
+#define FALSE 0
+#define TRUE 1
 #define FileBufferSIZE 1000000
+#define SEPARATOR " \n"
 
 int connectTRS(char* message);
 int countWords(char* s);
@@ -78,6 +79,8 @@ int main(int argc, char** argv) {
 
         if(!strcmp(instruction, "list")) {
 
+            i = 1;
+
             n = sendto(fdUDP, "ULQ\n", 4, 0, (struct sockaddr*)&addr, sizeof(addr));
             if (n == -1) exit(1); //error
 
@@ -85,17 +88,19 @@ int main(int argc, char** argv) {
             n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
             if (n == -1) exit(1); //error
 
-            if (strcmp(strtok(buffer, " "), "ULR")){
+            if (strcmp(strtok(buffer, SEPARATOR), "ULR")){
                 printf("TCS server error. Repeat request.");
                 break;
             }
-            numLang = atoi(strtok(NULL, " "));
-            i = 1;
+            numLang = atoi(strtok(NULL, SEPARATOR));
+
+            printf("\n----- Available languages: -----\n\n");
             while (i <= numLang){
-                strcpy(languages[i-1], strtok(NULL, " "));
-                printf("%d- %s\n", i, languages[i-1]);
+                strcpy(languages[i-1], strtok(NULL, SEPARATOR));
+                printf("%d -> %s\n", i, languages[i-1]);
                 i++;
             }
+            printf("\n--------------------------------\n\n");
             fflush(stdout);
 
         } else if (!strcmp(instruction, "request")){
@@ -159,13 +164,13 @@ int connectTRS(char* message){
     fdTCP = socket(AF_INET, SOCK_STREAM, 0); // TCP Socket
     if (fdTCP == -1) perror("Failed initializing socket");
 
-    if (strcmp(strtok(message, " "), "UNR")){
+    if (strcmp(strtok(message, SEPARATOR), "UNR")){
         printf("TCS server error. Repeat request.");
         exit(1);
     }
 
-    strcpy(TRSname, strtok(NULL, " ")); // getting the IP address of TRS from message
-    TRSport = atoi(strtok(NULL, " ")); // the TRS port from message
+    strcpy(TRSname, strtok(NULL, SEPARATOR)); // getting the IP address of TRS from message
+    TRSport = atoi(strtok(NULL, SEPARATOR)); // the TRS port from message
 
     memset((void*)&addr, (int)'\0', sizeof(addr));
     addr.sin_family = AF_INET;
@@ -279,13 +284,13 @@ int connectTRS(char* message){
 
     if (!strcmp(type, "f")){
 
-        token = strtok(buffer, " "); // request: use this to check for error
-        token = strtok(NULL, " "); // ditch the type
-        strcpy(filename, strtok(NULL, " ")); // get the filename
-        size = atoi(strtok(NULL, " ")); // get the file size
+        token = strtok(buffer, SEPARATOR); // request: use this to check for error
+        token = strtok(NULL, SEPARATOR); // ditch the type
+        strcpy(filename, strtok(NULL, SEPARATOR)); // get the filename
+        size = atoi(strtok(NULL, SEPARATOR)); // get the file size
 
         file = fopen(filename, "wb");
-        fwrite(strtok(NULL, " "), 1, size, file);
+        fwrite(strtok(NULL, SEPARATOR), 1, size, file);
         fclose(file);
 
     }
@@ -295,9 +300,9 @@ int connectTRS(char* message){
 
         memset(buffer, (int)'\0', size); // initializing the buffer with /0
 
-        token = strtok(userInput, " "); // TRR
+        token = strtok(userInput, SEPARATOR); // TRR
 
-        token = strtok(NULL, " "); // error message if present, if not, ditch the type
+        token = strtok(NULL, SEPARATOR); // error message if present, if not, ditch the type
         printf("%s\n", token );
         if (!strcmp(token, "ERR\n")){              //Check for error
             printf("Error\n");
@@ -307,10 +312,10 @@ int connectTRS(char* message){
             printf("No translation.\n");
             return 1;
         }
-        token = strtok(NULL, " "); // ditch the numWords
+        token = strtok(NULL, SEPARATOR); // ditch the numWords
 
         while (i < nWords){
-                    strcat(buffer, strtok(NULL, " "));
+                    strcat(buffer, strtok(NULL, SEPARATOR));
                     strcat(buffer, " ");
                     i++;
                 }
@@ -326,16 +331,16 @@ int connectTRS(char* message){
 
 int countWords(char* s){
  int count = 0, i;
- int foundLetter = False;
+ int foundLetter = FALSE;
  for (i = 0;i<strlen(s);i++)
  {
   if (s[i] == ' ')
-      foundLetter = False;
+      foundLetter = FALSE;
   else
   {
-      if (foundLetter == False)
+      if (foundLetter == FALSE)
           count++;
-      foundLetter = True;
+      foundLetter = TRUE;
   }
  }
  return count;
