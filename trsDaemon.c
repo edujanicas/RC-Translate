@@ -238,11 +238,19 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 	if (n == -1) exit(1); //error
 
 	addrlen = sizeof(addr);
+	memset((void*)&buffer, (int)'\0', sizeof(buffer));
 
 	n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, (socklen_t *)&addrlen);
 	if (n == -1) exit(1); //error
 
 	close(fdUDP);
+
+	if(!strcmp(buffer, "SRR NOK\n")) {
+		close(fd);
+		printf("Wasn't accepted as a valid server\n");
+		exit(0);
+	}
+
 	return 1;
 
 }
