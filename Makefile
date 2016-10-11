@@ -1,13 +1,13 @@
 all : tcs trs user
 
 tcs : tcsDaemon.c
-	gcc tcsDaemon.c -o TCS
+	gcc -std=c11 -Wall -pedantic tcsDaemon.c -o TCS
 
 trs : trsDaemon.c
-	gcc trsDaemon.c -o TRS
+	gcc -std=c11 -Wall -pedantic trsDaemon.c -o TRS
 
 user : user.c
-	gcc user.c -o user
+	gcc -std=c11 -Wall -pedantic user.c -o user
 
 clean :
 	rm TCS TRS user languages.txt
