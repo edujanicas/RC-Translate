@@ -203,16 +203,20 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 		perror("Could not get host name");
 		exit(1);
 	}
-	printf("Official host name: %s\n", buffer);
 	if((h=gethostbyname(buffer))==NULL) {
 		perror("Could not get host IP");
 		exit(1);
 	}
 	a=(struct in_addr*)h->h_addr_list[0];
-	printf("Internet address: %s\n", inet_ntoa(*a));
+
 	// INFORM TCS THAT IS NOT TRANSLATING
 	fdUDP = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
 	if (fd == -1) exit(1);
+
+	if (option == 1) {
+		printf("Official host name: %s\n", buffer);
+		printf("Internet address: %s\n", inet_ntoa(*a));
+	}
 
 	memset((void*)&buffer, (int)'\0', sizeof(buffer));
 	memset((void*)&addr, (int)'\0', sizeof(addr));
