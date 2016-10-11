@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
             } // Error handling
 
             addrlen = sizeof(addr);
-            n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
+            n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, (socklen_t*)&addrlen);
             if (n == -1) {
                 perror("Failed to receive message from TCS");
                 exit(1);
@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
             if (n == -1) exit(1); //error
 
             addrlen = sizeof(addr);
-            n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
+            n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, (socklen_t*)&addrlen);
             if (n == -1) exit(1); //error
             connectTRS(buffer);
 

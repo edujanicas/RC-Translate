@@ -27,8 +27,7 @@ int main(int argc, char** argv) {
 	// Variable declarations
 	int i, fd, n, addrlen, newfd, nw, ret;
 	struct sockaddr_in addr;
-	struct hostent *hostptr;
-	char instruction[32], buffer[128], response[2048] = "", TCSname[32] = "localhost";
+	char buffer[128], response[2048] = "", TCSname[32] = "localhost";
 	char *ptr;
 	pid_t pid;
 
@@ -135,7 +134,7 @@ int main(int argc, char** argv) {
 		memset((void*)&response, (int)'\0', sizeof(response));
 		addrlen = sizeof(addr);
 
-		do newfd = accept(fd, (struct sockaddr*)&addr, &addrlen);
+		do newfd = accept(fd, (struct sockaddr*)&addr, (socklen_t *)&addrlen);
 		while (newfd == -1 && errno == EINTR); //Wait for a connection
 
 		if(newfd == -1) {
@@ -172,7 +171,7 @@ int main(int argc, char** argv) {
 					ptr += nw;
 				}
 
-				printf("Sent message to: %s: %sSize: %d\n", inet_ntoa(addr.sin_addr), response, strlen(response));
+				printf("Sent message to: %s: %sSize: %lu\n", inet_ntoa(addr.sin_addr), response, strlen(response));
 
 				close(newfd);
 				exit(0);
@@ -240,7 +239,7 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 
 	addrlen = sizeof(addr);
 
-	n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
+	n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, (socklen_t *)&addrlen);
 	if (n == -1) exit(1); //error
 
 	close(fdUDP);
