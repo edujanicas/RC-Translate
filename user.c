@@ -56,13 +56,17 @@ int main(int argc, char** argv) {
 
     // UDP connection
     fdUDP = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
-    if (fdUDP == -1) exit(1);
+    if (fdUDP == -1) {
+		perror("Error creating socket");
+		exit(1);
+	} // Error handling
 
     hostptr = gethostbyname(TCSname);
     if(hostptr == NULL) {
         perror("Could not find host");
+		close(fdUDP);
         exit(1);
-    }
+    } // Error handling
 
     memset((void*)&buffer, (int)'\0', sizeof(buffer));
     memset((void*)&addr, (int)'\0', sizeof(addr));
@@ -312,11 +316,11 @@ int connectTRS(char* message){
 
         token = strtok(NULL, SEPARATOR); // error message if present, if not, ditch the type
         printf("%s\n", token );
-        if (!strcmp(token, "ERR\n")){              //Check for error
+        if (!strcmp(token, "ERR")){              //Check for error
             printf("Error\n");
             return 1;
         }
-         else if (!strcmp(token, "NTA\n")){              //Check for error
+         else if (!strcmp(token, "NTA")){              //Check for error
             printf("No translation.\n");
             return 1;
         }

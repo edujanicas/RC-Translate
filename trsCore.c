@@ -9,7 +9,7 @@ void trsCore(char* buffer, char* reply ,char* language) {
     char *brkt, *brkb;
     char numberOfWordsStr[2];
     char fileName[32];
-    int numberOfWords, n;
+    int numberOfWords, n, count;
 
     FILE *translation;
     size_t len = 0;
@@ -29,23 +29,26 @@ void trsCore(char* buffer, char* reply ,char* language) {
         // W1 W2 ... WN are strings specifying each of the N words, separated by spaces.
         // It can be assumed that each word (Wn) contains no more than 30 characters.
         // No more than 10 words are sent in each request instruction.
-        strcpy(reply, "TRR t ");
-	
-	strcpy(fileName, "text_translation-\0");
-	strcat(fileName, language);
-	strcat(fileName, ".txt\0");
+
+
+		strcpy(fileName, "text_translation-\0");
+		strcat(fileName, language);
+		strcat(fileName, ".txt\0");
         translation = fopen(fileName, "r");
         if (translation == NULL) {
             perror("Error opening text_translation.txt");
-            exit(EXIT_FAILURE);
+			strcpy(reply, "TRR ERR\n\0");
+            return;
         }
 
+		strcpy(reply, "TRR t ");
         strcpy(numberOfWordsStr, strtok_r(NULL, " \n", &brkt));
         numberOfWords = atoi(numberOfWordsStr);
         strcat(reply, numberOfWordsStr);
 
         for(n = 0; n < numberOfWords; n++) {
 
+			count = 0;
             instruction = strtok_r(NULL, " \n", &brkt); // instruction retains the word to be translated
 
             while ((read = getline(&line, &len, translation)) != -1) {
@@ -54,10 +57,15 @@ void trsCore(char* buffer, char* reply ,char* language) {
                     word = strtok_r(NULL, " \n", &brkb);
                     strcat(reply, " "); // Append a whitespace between words
                     strcat(reply, word);
+					count++;
                     break;
                 }
             }
             rewind(translation); // Position the stream at the beggining of the file
+
+			if (count == 0) {
+				strcpy(reply, "TRR NTA");
+			}
         }
         strcat(reply, "\n");
 
@@ -66,7 +74,8 @@ void trsCore(char* buffer, char* reply ,char* language) {
         translation = fopen("file_translation.txt", "r");
         if (translation == NULL) {
             perror("Error opening file_translation.txt");
-            exit(EXIT_FAILURE);
+			strcpy(reply, "TRR ERR\n\0");
+            return;
         }
       }
     }
