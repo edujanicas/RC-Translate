@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 		perror("Could not get host IP");
 		exit(1);
 	}
-	a=(struct in_addr*)h->h_addr_list[0];
+	a=(struct in_addr*)h->h_addr_list[1];
 	printf("Internet address: %s\n", inet_ntoa(*a));
 
   strcpy(language, argv[1]);
@@ -131,7 +131,9 @@ int main(int argc, char** argv) {
 
   strcpy(buffer, "SRG ");
   strcat(buffer, language);
-  strcat(buffer, " 127.0.0.1 59000\n");
+	strcat(buffer, " ");
+	strcat(buffer, inet_ntoa(*a));
+  strcat(buffer, " 59000\n");
   n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
   if (n == -1) exit(1); //error
 
@@ -155,7 +157,7 @@ int main(int argc, char** argv) {
   if(listen(fd, 5) == -1) perror("Failed to listen");
 
   while(1) {
-    
+
     memset((void*)&buffer, (int)'\0', sizeof(buffer));
     memset((void*)&response, (int)'\0', sizeof(response));
     addrlen = sizeof(addr);
