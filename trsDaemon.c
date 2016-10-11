@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 	strcat(buffer, " ");
 	strcat(buffer, inet_ntoa(*a));
 	strcat(buffer, " ");
-	strcat(buffer, TRSport);
+	strcat(buffer, "59000");
   strcat(buffer, "\n");
   n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
   if (n == -1) exit(1); //error
@@ -183,9 +183,9 @@ int main(int argc, char** argv) {
           n -= nw;
           ptr += nw;
         }
+	close(newfd);
+	exit(0);
       }
-      close(newfd);
-      exit(0);
     }
     // Parent process
     do ret = close(newfd);
