@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 		perror("Could not get host IP");
 		exit(1);
 	}
-	a=(struct in_addr*)h->h_addr_list[1];
+	a=(struct in_addr*)h->h_addr_list[0];
 	printf("Internet address: %s\n", inet_ntoa(*a));
 
   strcpy(language, argv[1]);
@@ -133,7 +133,9 @@ int main(int argc, char** argv) {
   strcat(buffer, language);
 	strcat(buffer, " ");
 	strcat(buffer, inet_ntoa(*a));
-  strcat(buffer, " 59000\n");
+	strcat(buffer, " ");
+	strcat(buffer, TRSport);
+  strcat(buffer, "\n");
   n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
   if (n == -1) exit(1); //error
 
