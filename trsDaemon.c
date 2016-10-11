@@ -133,7 +133,9 @@ int main(int argc, char** argv) {
   strcat(buffer, language);
 	strcat(buffer, " ");
 	strcat(buffer, inet_ntoa(*a));
-  strcat(buffer, " 59000\n");
+	strcat(buffer, " ");
+	strcat(buffer, TRSport);
+  strcat(buffer, "\n");
   n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
   if (n == -1) exit(1); //error
 
