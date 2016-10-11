@@ -15,19 +15,18 @@
 #define FileBufferSIZE 1000000
 #define SEPARATOR " \n"
 
+// Function prototypes
 int connectTRS(char* message);
 int countWords(char* s);
 
 int main(int argc, char** argv) {
 
-    int fdUDP, n, addrlen, numLang, i = 1;
+    // Variable declarations
+    int fdUDP, n, addrlen, numLang, i, TCSport = 58000;
     struct sockaddr_in addr;
     struct hostent *hostptr;
-    char buffer[128];
-    char TCSname[32] = "localhost";
-    char instruction[32];
+    char buffer[128], instruction[32], TCSname[32] = "localhost";
     char languages[32][99];
-    int TCSport = 58000;
 
     // Argument reading
     if(argc != 1 && argc != 3 && argc != 5) {
@@ -71,28 +70,38 @@ int main(int argc, char** argv) {
     addr.sin_addr.s_addr = ((struct in_addr *)(hostptr -> h_addr_list[0])) -> s_addr;
     addr.sin_port = htons(TCSport);
 
+    // Process input
     printf(">> ");
     fflush(stdout);
 
     scanf("%s", instruction);
+
     while(strcmp(instruction, "exit")) {
 
         if(!strcmp(instruction, "list")) {
-
-            i = 1;
+            // The user will send an ULQ message
+            // The response will be of format ULR nL L1 L2 ... Ln
 
             n = sendto(fdUDP, "ULQ\n", 4, 0, (struct sockaddr*)&addr, sizeof(addr));
-            if (n == -1) exit(1); //error
+            if (n == -1) {
+                perror("Failed to send message to TCS");
+                exit(1);
+            } // Error handling
 
             addrlen = sizeof(addr);
             n = recvfrom(fdUDP, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
-            if (n == -1) exit(1); //error
+            if (n == -1) {
+                perror("Failed to receive message from TCS");
+                exit(1);
+            } // Error handling
 
             if (strcmp(strtok(buffer, SEPARATOR), "ULR")){
                 printf("TCS server error. Repeat request.");
                 break;
-            }
+            } // Error handling
+
             numLang = atoi(strtok(NULL, SEPARATOR));
+            i = 1;
 
             printf("\n----- Available languages: -----\n\n");
             while (i <= numLang){
@@ -101,9 +110,12 @@ int main(int argc, char** argv) {
                 i++;
             }
             printf("\n--------------------------------\n\n");
+
             fflush(stdout);
 
         } else if (!strcmp(instruction, "request")){
+            // The user will send an URQ Ln message
+            // The response will be of format UNR IPTRS portTRS
 
             strcpy(instruction, "UNQ \0");
             scanf("%d", &i);
@@ -129,12 +141,8 @@ int main(int argc, char** argv) {
 
         scanf("%s", instruction);
     }
+
     close(fdUDP);
-    /*
-    hostptr = gethostbyaddr((char*)&addr.sin_addr, sizeof(struct in_addr), AF_INET);
-    if (hostptr == NULL) printf("sent by [%s:%hu]\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
-    else printf("sent by [%s:%hu]", hostptr -> h_name, ntohs(addr.sin_port));
-    */
     exit(0);
 }
 
