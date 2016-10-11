@@ -14,12 +14,73 @@ extern int errno;
 
 #define max(A, B) ((A) > (B)?(A):(B))
 
-int fd;
+int fd, TRSport, TCSport, addrlen, n;
+char TCSname[32], language[32];
+
+void informTCS(int TRSport, int TCSport, char* TCSname, short option);
 
 static void quitTRS(int signo) {
 	printf("Will now kill TCS\n");
+	informTCS(TRSport, TCSport, TCSname, 0);
 	close(fd);
 	exit(0);
+}
+
+void informTCS(int TRSport, int TCSport, char* TCSname, short option) {
+	// 0 to leave, 1 to join
+	int fd;
+	struct hostent *hostptr;
+	struct hostent *h;
+  	struct in_addr *a;
+	struct sockaddr_in addr;
+  	char buffer[128];
+
+	if(gethostname(buffer, 128)==-1) {
+		perror("Could not get host name");
+		exit(1);
+	}
+	printf("Official host name: %s\n", buffer);
+	if((h=gethostbyname(buffer))==NULL) {
+		perror("Could not get host IP");
+		exit(1);
+	}
+	a=(struct in_addr*)h->h_addr_list[0];
+	printf("Internet address: %s\n", inet_ntoa(*a));
+	// INFORM TCS THAT IS NOT TRANSLATING
+	fd = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
+	if (fd == -1) exit(1);
+
+	hostptr = gethostbyname(TCSname);
+	if(hostptr == NULL) {
+		perror("Could not find host");
+		exit(1);
+	}
+
+	memset((void*)&buffer, (int)'\0', sizeof(buffer));
+	memset((void*)&addr, (int)'\0', sizeof(addr));
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = ((struct in_addr *)(hostptr -> h_addr_list[0])) -> s_addr;
+	addr.sin_port = htons(TCSport);
+
+	if (option == 0) {
+		strcpy(buffer, "SUN ");
+	} else {
+		strcpy(buffer, "SRG ");
+	}
+	strcat(buffer, language);
+   	strcat(buffer, " ");
+   	strcat(buffer, inet_ntoa(*a));
+   	strcat(buffer, " ");
+   	strcat(buffer, "59000");
+	strcat(buffer, "\n");
+	n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
+	if (n == -1) exit(1); //error
+
+	addrlen = sizeof(addr);
+
+	n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
+	if (n == -1) exit(1); //error
+
 }
 
 int main(int argc, char** argv) {
@@ -27,18 +88,17 @@ int main(int argc, char** argv) {
   int i, fd, n, addrlen, newfd, nw, ret;
   struct sockaddr_in addr;
   struct hostent *hostptr;
-  struct hostent *h;
-  struct in_addr *a;
   char buffer[128];
   char response[2048] = "";
   char TCSname[32] = "localhost";
   char instruction[32];
-  char language[32];
-  int TCSport = 58000;
-  int TRSport = 59000;
   char *ptr;
   pid_t pid;
   void (*old_handler)(int); //Interrupt handler
+
+  TCSport = 58000;
+  TRSport = 59000;
+  strcpy(TCSname, "localhost");
 
   // Argument reading
   if(argc != 2 && argc != 4 && argc != 6 && argc != 8) {
@@ -96,53 +156,12 @@ int main(int argc, char** argv) {
     }
   }
 
-	if(gethostname(buffer, 128)==-1) {
-		perror("Could not get host name");
-		exit(1);
-	}
-	printf("Official host name: %s\n", buffer);
-	if((h=gethostbyname(buffer))==NULL) {
-		perror("Could not get host IP");
-		exit(1);
-	}
-	a=(struct in_addr*)h->h_addr_list[0];
-	printf("Internet address: %s\n", inet_ntoa(*a));
-
   strcpy(language, argv[1]);
 
   if((old_handler = signal(SIGCHLD, SIG_IGN)) == SIG_ERR) exit(1);
-	if((old_handler = signal(SIGINT, quitTRS))) exit(1);
+  if((old_handler = signal(SIGINT, quitTRS))) exit(1);
 
-  // INFORM TCS THAT IS NOW TRANSLATING
-  fd = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
-  if (fd == -1) exit(1);
-
-  hostptr = gethostbyname(TCSname);
-  if(hostptr == NULL) {
-      perror("Could not find host");
-      exit(1);
-  }
-
-  memset((void*)&buffer, (int)'\0', sizeof(buffer));
-  memset((void*)&addr, (int)'\0', sizeof(addr));
-  addr.sin_family = AF_INET;
-  addr.sin_addr.s_addr = ((struct in_addr *)(hostptr -> h_addr_list[0])) -> s_addr;
-  addr.sin_port = htons(TCSport);
-
-  strcpy(buffer, "SRG ");
-  strcat(buffer, language);
-	strcat(buffer, " ");
-	strcat(buffer, inet_ntoa(*a));
-	strcat(buffer, " ");
-	strcat(buffer, "59000");
-  strcat(buffer, "\n");
-  n = sendto(fd, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
-  if (n == -1) exit(1); //error
-
-  addrlen = sizeof(addr);
-
-  n = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, &addrlen);
-  if (n == -1) exit(1); //error
+  informTCS(TRSport, TCSport, TCSname, 1);
 
   if((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) perror("Error creating socket");
 

@@ -90,6 +90,7 @@ int main(int argc, char** argv) {
                 break;
             }
             numLang = atoi(strtok(NULL, " "));
+            i = 1;
             while (i <= numLang){
                 strcpy(languages[i-1], strtok(NULL, " "));
                 printf("%d- %s\n", i, languages[i-1]);

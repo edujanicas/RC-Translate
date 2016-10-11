@@ -91,10 +91,13 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
           fwrite(tmp, strlen(tmp), 1, trsServers);
           rewind(trsServers);
           *nServers += 1;
-         strcpy(reply, "SRR OK\n"); // The reply[0]reply[0][0] must end with \n
+          strcpy(reply, "SRR OK\n"); // The reply[0]reply[0][0] must end with \n
+      } else if (!strcmp(instruction, "SUN")) {
+
+          // TODO : NUNO
       }
     }
-    
+
     fclose(trsServers);
     if (line) free(line);
 
