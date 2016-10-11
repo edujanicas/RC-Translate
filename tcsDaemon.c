@@ -36,20 +36,16 @@ int main(int argc, char** argv) {
 	} else if (argc == 3) {
 		port = *argv[2];
 	}
-	
+
 	nServers = malloc(sizeof(int));
 	*nServers = 0;
 
-	if(gethostname(buffer, 512)==-1) {
-		perror("Could not get host name");
-		exit(1);
-	}
-	printf("Official host name: %s\n", buffer);
-	if((h=gethostbyname(buffer))==NULL) {
+	if((h=gethostbyname("elementary.tecnico.ulisboa.pt"))==NULL) {
 		perror("Could not get host IP");
 		exit(1);
 	}
 	a=(struct in_addr*)h->h_addr_list[0];
+	printf("Official host name: %s\n", h->h_name);
 	printf("Internet address: %s\n", inet_ntoa(*a));
 
 	if((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ) perror("Error creating socket");
