@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 		perror("Could not get host IP");
 		exit(1);
 	}
-	a=(struct in_addr*)h->h_addr_list[1];
+	a=(struct in_addr*)h->h_addr_list[0];
 	printf("Internet address: %s\n", inet_ntoa(*a));
 
   strcpy(language, argv[1]);
