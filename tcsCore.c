@@ -104,7 +104,15 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 			strcpy(reply, "SRR OK\n"); // The reply[0]reply[0][0] must end with \n
 		} else if (!strcmp(instruction, "SUN")) {
 
-			// TODO : NUNO
+			rewind(trsServers);
+			while ((read = getline(&line, &len, trsServers)) != -1) {
+				if (!strcmp(language, instruction)) {
+
+					fclose(trsServers);
+					free(line);
+					return;
+				}
+			}
 		}
 	}
 
