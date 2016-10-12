@@ -1,0 +1,5 @@
+diEN.jpg diPT.jpg
+dmatosEN.jpg dmatosPT.jpg
+eduEN.jpg eduPT.jpg
+nunoEN.jpg nunoPT.jpg
+soEN.jpg soPT.jpg

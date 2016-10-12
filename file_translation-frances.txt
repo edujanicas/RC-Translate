@@ -1,0 +1,5 @@
+diIT.jpg diPT.jpg
+dmatosIT.jpg dmatosPT.jpg
+eduIT.jpg eduPT.jpg
+nunoIT.jpg nunoPT.jpg
+soIT.jpg soPT.jpg

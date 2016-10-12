@@ -1,0 +1,5 @@
+diFR.jpg diPT.jpg
+dmatosFR.jpg dmatosPT.jpg
+eduFR.jpg eduPT.jpg
+nunoFR.jpg nunoPT.jpg
+soFR.jpg soPT.jpg
