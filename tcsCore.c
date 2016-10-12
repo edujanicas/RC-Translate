@@ -7,7 +7,7 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 	char *instruction, *language, tmp[2048];
 	char *line = NULL;
 
-	FILE *trsServers;
+	FILE *trsServers, *newTRSservers;
 	size_t len = 0;
 	ssize_t read;
 
@@ -31,8 +31,8 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 		The file is of type L1 IP1 PORT1
 		L2 IP2 PORT2, and so on
 		We will only get the first word of each line */
-		rewind(trsServers);
-		while ((read = getline(&line, &len, trsServers)) != -1) {
+		rewind(trsServers); // Back to the start of the file
+		while ((read = getline(&line, &len, trsServers)) != -1) { // Search each line
 			language = strtok(line, " \n"); // language is the first component of a line
 			strcat(reply, " "); // Append a whitespace between trsServers
 			strcat(reply, language);
@@ -104,15 +104,31 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 			strcpy(reply, "SRR OK\n"); // The reply[0]reply[0][0] must end with \n
 		} else if (!strcmp(instruction, "SUN")) {
 
-			rewind(trsServers);
-			while ((read = getline(&line, &len, trsServers)) != -1) {
-				if (!strcmp(language, instruction)) {
+			language = strtok(NULL, " \n");
 
-					fclose(trsServers);
-					free(line);
-					return;
+			newTRSservers = fopen("languages~.txt", "w+");
+			if (newTRSservers == NULL) {
+				perror("Error opening languages~.txt");
+				exit(EXIT_FAILURE);
+			}
+
+			rewind(trsServers);
+
+			while ((read = getline(&line, &len, trsServers)) != -1) {
+				strcpy(tmp, line); // Save the line in a temporary buffer
+				instruction = strtok(line, " \n"); // Then get the language
+ 				if (!strcmp(language, instruction)) {
+					*nServers -= 1;
+				} else {
+					fwrite(tmp, strlen(tmp), 1, newTRSservers);
 				}
 			}
+			fclose(trsServers);
+			remove("languages.txt");
+			rename("languages~.txt", "languages.txt");
+			fclose(newTRSservers);
+			if (line) free(line);
+			return;
 		}
 	}
 

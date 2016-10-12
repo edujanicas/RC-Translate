@@ -37,8 +37,8 @@ int main(int argc, char** argv) {
 	if((old_handler = signal(SIGINT, quitTRS))) exit(1);
 
 	// Variable initialization
-	TCSport = 58000;
-	TRSport = 59000;
+	TCSport = 58021;
+	TRSport = 59021;
 	strcpy(TCSname, "localhost");
 
 	// Argument reading
@@ -196,7 +196,7 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 	struct hostent *h;
 	struct in_addr *a;
 	struct sockaddr_in addr;
-	char buffer[128];
+	char buffer[128], port[8];
 
 	if(gethostname(buffer, 128)==-1) {
 		perror("Could not get host name");
@@ -232,7 +232,8 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 	strcat(buffer, " ");
 	strcat(buffer, inet_ntoa(*a));
 	strcat(buffer, " ");
-	strcat(buffer, "59000");
+	sprintf(port, "%d", TRSport);
+	strcat(buffer, port);
 	strcat(buffer, "\n");
 	n = sendto(fdUDP, buffer, strlen(buffer), 0, (struct sockaddr*)&addr, sizeof(addr));
 	if (n == -1) exit(1); //error

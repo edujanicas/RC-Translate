@@ -22,7 +22,7 @@ int countWords(char* s);
 int main(int argc, char** argv) {
 
     // Variable declarations
-    int fdUDP, n, addrlen, numLang, i, TCSport = 58000;
+    int fdUDP, n, addrlen, numLang, i, TCSport = 58021;
     struct sockaddr_in addr;
     struct hostent *hostptr;
     char buffer[128], instruction[32], TCSname[32] = "localhost";

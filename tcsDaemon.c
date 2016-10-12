@@ -20,7 +20,7 @@ static void quitTCS(int signo) {
 
 int main(int argc, char** argv) {
 
-	int addrlen, ret, nread, port = 58000, *nServers;
+	int addrlen, ret, nread, port = 58021, *nServers;
 	struct sockaddr_in addr;
 	struct hostent *h;
 	struct in_addr *a;
