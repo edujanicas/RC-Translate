@@ -131,6 +131,7 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 					*nServers -= 1;
 				} else {
 					fwrite(tmp, strlen(tmp), 1, newTRSservers);
+					strcpy(reply, "SUR NOK\n");
 				}
 			}
 			fclose(trsServers);
@@ -138,6 +139,7 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 			rename("languages~.txt", "languages.txt");
 			fclose(newTRSservers);
 			if (line) free(line);
+			strcpy(reply, "SUR OK\n");
 			return;
 		}
 	}
