@@ -73,14 +73,14 @@ int main(int argc, char** argv) {
 		addrlen = sizeof(addr);
 		nread = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, (socklen_t *)&addrlen);
 		if(nread == -1) perror("Error on receiving the message");
-    printf("Received message from %s: %s", inet_ntoa(addr.sin_addr), buffer);
+    	printf("Received message from %s: %s", inet_ntoa(addr.sin_addr), buffer);
 
 		// PROCESS THE INPUT MESSEGE AND FILL THE RESULT IN RESPONSE
     		tcsCore(buffer, response, nServers);
 		// REPLY
 		ret = sendto(fd, response, strlen(response), 0, (struct sockaddr*)&addr, addrlen);
 		if(ret == -1) perror("Error echoing the answer");
-    printf("Sent message to %s: %s", inet_ntoa(addr.sin_addr), response);
+    	printf("Sent message to %s: %s", inet_ntoa(addr.sin_addr), response);
 
 
 	}

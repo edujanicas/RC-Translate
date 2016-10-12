@@ -6,10 +6,10 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 
 	char *instruction, *language, tmp[2048];
 	char *line = NULL;
-
 	FILE *trsServers, *newTRSservers;
 	size_t len = 0;
 	ssize_t read;
+	int n = 0;
 
 	trsServers = fopen("languages.txt", "a+");
 	if (trsServers == NULL) {
@@ -51,6 +51,16 @@ void tcsCore(char* buffer, char* reply, int* nServers) {
 
 			strcpy(reply, "UNR");
 			instruction = strtok(NULL, " \n");
+
+			if (!instruction) { 		// Check if the instruction was sent
+				fclose(trsServers);
+				return;
+			}
+			n = atoi(instruction);		// If it was, check if it's a valid language
+			if (n > *nServers) {
+				fclose(trsServers);
+				return;
+			}
 
 			/* The list of trsServers is on the trsServers.txt file.
 			The file is of type L1 IP1 PORT1
