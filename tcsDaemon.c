@@ -25,7 +25,6 @@ int main(int argc, char** argv) {
 	struct hostent *h;
 	struct in_addr *a;
 	char buffer[512];
-	char domain[32];
 	char response[2048];
 	void (*old_handler)(int); //Interrupt handler
 
@@ -45,11 +44,7 @@ int main(int argc, char** argv) {
 		perror("Could not get host name");
 		exit(1);
 	}
-	if(getdomainname(domain, 32)==-1) {
-		perror("Could not get domain name");
-		exit(1);
-	}
-	strcat(buffer, domain);
+	strcat(buffer, ".tecnico.ulisboa.pt");
 	printf("Official host name: %s\n", buffer);
 	if((h=gethostbyname(buffer))==NULL) {
 		perror("Could not get host IP");
