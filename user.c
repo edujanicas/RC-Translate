@@ -23,7 +23,7 @@ int sendFile(int fd, char* userInput);
 int main(int argc, char** argv) {
 
     // Variable declarations
-    int fdUDP, n, addrlen, numLang, i, TCSport = 58021;
+    int fdUDP, n, addrlen, numLang = 0, i, TCSport = 58021;
     struct sockaddr_in addr;
     struct hostent *hostptr;
     char buffer[128], instruction[32], TCSname[32] = "localhost";
@@ -109,6 +109,7 @@ int main(int argc, char** argv) {
 			token = strtok(NULL, SEPARATOR); // token will retain the number of languages
 			if (!token) {
 				printf("Error on TCS reply, please try again\n");
+				fflush(stdin);
 				continue;
 			} // Error handling
 			numLang = atoi(token);
@@ -119,6 +120,8 @@ int main(int argc, char** argv) {
 				token = strtok(NULL, SEPARATOR);
 				if (!token) {
 					printf("Error on TCS reply, please try again\n");
+					fflush(stdout);
+					fflush(stdin);
 					continue;
 				} // Error handling
                 strcpy(languages[i-1], token);
@@ -136,6 +139,12 @@ int main(int argc, char** argv) {
             strcpy(instruction, "UNQ \0");
             scanf("%d", &i);
 
+			if(i > numLang) {
+				printf("Invalid language, plese try another one\n");
+				fflush(stdout);
+				fflush(stdin);
+				continue;
+			}
             strcat(instruction, languages[i-1]);
             strcat(instruction, "\n");
 
@@ -154,6 +163,7 @@ int main(int argc, char** argv) {
 
         printf(">> ");
         fflush(stdout);
+		fflush(stdin);
 
         scanf("%s", instruction);
     }
@@ -292,18 +302,24 @@ int connectTRS(char* message){
         token = strtok(NULL, SEPARATOR); // error message if present, if not, ditch the type
 
         if (!strcmp(token, "ERR")){
-            perror("TRS: Bad request");
+            printf("TRS: Bad request\n");
             return 1;
         }
          else if (!strcmp(token, "NTA")){
-            perror("TRS: No translation");
+            printf("TRS: No translation\n");
             return 1;
         }
 
         token = strtok(NULL, SEPARATOR); // ditch the numWords
 
         while (i < nWords){
-                    strcat(buffer, strtok(NULL, SEPARATOR));
+					token = strtok(NULL, SEPARATOR);
+					if (!token) {
+						printf("Error while reading the response, please try again\n");
+						close(fdTCP);
+						return(0);
+					}
+                    strcat(buffer, token);
                     strcat(buffer, " ");
                     i++;
                 }
