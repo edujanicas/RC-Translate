@@ -12,17 +12,18 @@
 
 #define FALSE 0
 #define TRUE 1
-#define FileBufferSIZE 1000000
+#define BUFFER_SIZE 512
 #define SEPARATOR " \n"
 
 // Function prototypes
 int connectTRS(char* message);
 int countWords(char* s);
+int sendFile(int fd, char* userInput);
 
 int main(int argc, char** argv) {
 
     // Variable declarations
-    int fdUDP, n, addrlen, numLang, i, TCSport = 58021;
+    int fdUDP, n, addrlen, numLang, i, TCSport = 58000;
     struct sockaddr_in addr;
     struct hostent *hostptr;
     char buffer[128], instruction[32], TCSname[32] = "localhost";
@@ -30,18 +31,18 @@ int main(int argc, char** argv) {
 
     // Argument reading
     if(argc != 1 && argc != 3 && argc != 5) {
-		printf("Usage: ./user [-n TCSname] [-p TCSport]\n");
-		exit(1);
-	} else if (argc == 3) {
-		if (!strcmp(argv[1], "-n")) {
+        printf("Usage: ./user [-n TCSname] [-p TCSport]\n");
+        exit(1);
+    } else if (argc == 3) {
+        if (!strcmp(argv[1], "-n")) {
             strcpy(TCSname, argv[2]);
         } else if (!strcmp(argv[1], "-p")) {
             TCSport = atoi(argv[2]);
         } else {
             printf("Usage: ./user [-n TCSname] [-p TCSport]\n");
-    		exit(1);
+            exit(1);
         }
-	} else if (argc == 5) {
+    } else if (argc == 5) {
         if (!strcmp(argv[1], "-n") && !strcmp(argv[3], "-p")) {
             strcpy(TCSname, argv[2]);
             TCSport = atoi(argv[4]);
@@ -50,21 +51,21 @@ int main(int argc, char** argv) {
             TCSport = atoi(argv[2]);
         } else {
             printf("Usage: ./user [-n TCSname] [-p TCSport]\n");
-    		exit(1);
+            exit(1);
         }
     }
 
     // UDP connection
     fdUDP = socket(AF_INET, SOCK_DGRAM, 0); // UDP socket
     if (fdUDP == -1) {
-		perror("Error creating socket");
-		exit(1);
-	} // Error handling
+        perror("Error creating socket");
+        exit(1);
+    } // Error handling
 
     hostptr = gethostbyname(TCSname);
     if(hostptr == NULL) {
         perror("Could not find host");
-		close(fdUDP);
+        close(fdUDP);
         exit(1);
     } // Error handling
 
@@ -150,35 +151,42 @@ int main(int argc, char** argv) {
     exit(0);
 }
 
+
+/*****************************************************************************
+                            FUNCTION connectTRS
+Receives the request answer with the TRS info from the TCS and creates a TCP 
+socket to the TRS. Processes the request if text translation, if file translation 
+requested it calls function sendFile.
+Returns 0 if successful and 1 otherwise.
+******************************************************************************/
+
 int connectTRS(char* message){
     // message is the info necessary to connect to TRS, given by TCS
-    void (*old_handler)(int); //interrupt hanlder
+    void (*old_handler)(int); //interrupt handler
 
     if ((old_handler = signal(SIGPIPE, SIG_IGN)) == SIG_ERR) exit(1); // Error
 
-    int fdTCP, n, nbytes, nleft, nwritten, nread, nWords, size, sizeBuffer, i=0;
+    int fdTCP, n, nleft, nwritten, nread, nWords, i=0;
     struct sockaddr_in addr;
     char *ptr;
     char TRSname[32] = "localhost";
     char request[8] = "TRQ ";
     char* buffer;
-    char* fileStr;
     char userInput[320];
     char type[8];
     char nWordsStr[8];
-    char fileLengthStr[8];
     char* token;
     int TRSport = 59000;
-    FILE *file;
-    char filename[32];
-    int fileLength;
 
-    fdTCP = socket(AF_INET, SOCK_STREAM, 0); // TCP Socket
-    if (fdTCP == -1) perror("Failed initializing socket");
+    // TCP Socket
+    if ((fdTCP = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+        perror("Failed initializing socket");
+        return 1;
+    }
 
     if (strcmp(strtok(message, SEPARATOR), "UNR")){
-        printf("TCS server error. Repeat request.");
-        exit(1);
+        perror("Bad request");
+        return 1;
     }
 
     strcpy(TRSname, strtok(NULL, SEPARATOR)); // getting the IP address of TRS from message
@@ -189,8 +197,11 @@ int connectTRS(char* message){
     addr.sin_addr.s_addr = inet_addr(TRSname);
     addr.sin_port = htons(TRSport);
 
-    n = connect(fdTCP, (struct sockaddr*)&addr, sizeof(addr)); // connect to TRS
-    if (n == -1) { perror("Failed to connect"); exit(1);}
+    // connect to TRS
+    if ((n = connect(fdTCP, (struct sockaddr*)&addr, sizeof(addr))) == -1) { 
+        perror("Failed to connect"); 
+        return 1;
+    }
 
     printf("%s %d\n", TRSname, TRSport); // print TRS info
 
@@ -200,130 +211,84 @@ int connectTRS(char* message){
     n = sscanf(userInput, "%s", type);
 
     // the type has to be text(t) or file (f)
+    // if file, it's dealt by function sendFile
     if (!strcmp(type, "f")){
-        n = sscanf(userInput, "%s" "%s", type, filename); // get the filename
-
-        //open the image file in binary
-        if ((file = fopen(filename, "rb")) == NULL){
-            printf("Error opening file\n");
-            exit(1);} // error
-
-        fseek(file, 0, SEEK_END); // Seek to the end of the file
-        fileLength = ftell(file); // Get the size from the end position
-        rewind(file);             // Go back to the start of the file
-
-        size = FileBufferSIZE;
-        buffer = (char*) malloc (sizeof(char)*size);
-        fileStr = (char*) malloc (sizeof(char)*fileLength);
-        memset(buffer, (int)'\0', size); // initializing the buffer with /0
-
-        strcpy(buffer, request); // put the request code in the buffer
-        strcat(buffer, type);
-        strcat(buffer, " ");
-        strcat(buffer, filename);
-        strcat(buffer, " ");
-        sprintf(fileLengthStr, "%d", fileLength);
-        strcat(buffer, fileLengthStr);
-        strcat(buffer, " ");
-
-        if ((nWords= fread(fileStr, 1, fileLength, file)) != fileLength) { // Reads, stores in buffer and returns the total number of elements successfully read
-            printf("Error reading file");
-            exit(1); //error reading file
-        }
-        sizeBuffer = strlen(buffer) + fileLength + 1;
-        strcat(buffer, fileStr);
-        strcat(buffer, "\n");
-
-
-        }
+        if (sendFile(fdTCP, userInput)!=0)
+            perror("Error at function sendFile");
+            close(fdTCP);
+            return 1;
+            }
 
     else if (!strcmp(type, "t")){
         nWords = countWords(userInput) - 1; // remove type from count
-        size = 320;
-        buffer = (char*) malloc (sizeof(char)*size);
-        memset(buffer, (int)'\0', size); // initializing the buffer with /0
+        buffer = (char*) malloc (sizeof(char)*BUFFER_SIZE);
+        memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
 
         strcpy(buffer, request); // put the request code in the buffer
         strcat(buffer, type);
         strcat(buffer, " ");
-
-
 
         sprintf(nWordsStr, "%d", nWords);
         strcat(buffer, nWordsStr);
 
         strcat(buffer, &userInput[2]);
-        sizeBuffer = strlen(buffer);
-    }
 
-    else{
-        printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
-        return 1;
-    }
+        // Send translation request and text to translate to TRS
+        ptr = buffer;
+        nleft = strlen(buffer);  
 
-    ptr = buffer;
-    nbytes = sizeBuffer;
+        while(nleft > 0) {
+            nwritten = write(fdTCP, ptr, nleft);
+            if (nwritten == -1){
+                perror("Failed to write text to TRS");
+                return 1;
+            }
+            nleft -= nwritten;
+            ptr += nwritten;
+        }
 
-    nleft = nbytes;
+        printf("Text to translate sent.\n");
 
-    while(nleft > 0) {
-        nwritten = write(fdTCP, ptr, nleft);
-        if (nwritten <= 0) perror("Falha a enviar mensagem");
-        nleft -= nwritten;
-        ptr += nwritten;
-    }
+        // Receive answer from TRS
+        memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+        ptr = buffer;
+        nleft = BUFFER_SIZE;
 
-    printf("Sent.\n");
-    nleft = size;
+        while(nleft > 0) {
+            nread = read(fdTCP, ptr, nleft);
+            if (nread == -1){
+                perror("Failed to read text translation from TRS");
+                return 1;
+            }
+            else if (nread == 0) break; // Closed by peer
+            nleft -= nread;
+            ptr += nread;
+        }
 
-    memset(buffer, (int)'\0', size); // initializing the buffer with /0
-    ptr = buffer;
+        if (nleft <= 0 || !buffer){
+            perror("Failed to receive all data");
+            return 1;
+        }
 
-    while(nleft > 0) {
-        nread = read(fdTCP, ptr, nleft);
-        printf("%d\n", nread);
-        if (nread == -1) perror("Falha a ler mensagem");
-        else if (nread == 0) break; // Closed by peer
-        nleft -= nread;
-        ptr += nread;
-    }
-    if (nleft <= 0 || !(buffer)){
-        printf("Not able to receive all data. Repeat request.\n");
-        return 1;
-    }
+        printf("Text translation received.\n");
 
-    printf("Received.\n");
-
-    if (!strcmp(type, "f")){
-
-        token = strtok(buffer, SEPARATOR); // request: use this to check for error
-        token = strtok(NULL, SEPARATOR); // ditch the type
-        strcpy(filename, strtok(NULL, SEPARATOR)); // get the filename
-        size = atoi(strtok(NULL, SEPARATOR)); // get the file size
-
-        file = fopen(filename, "wb");
-        fwrite(strtok(NULL, SEPARATOR), 1, size, file);
-        fclose(file);
-
-    }
-
-    else if (!strcmp(type, "t")){
         strcpy(userInput, buffer);
 
-        memset(buffer, (int)'\0', size); // initializing the buffer with /0
+        memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
 
         token = strtok(userInput, SEPARATOR); // TRR
 
         token = strtok(NULL, SEPARATOR); // error message if present, if not, ditch the type
-        printf("%s\n", token );
-        if (!strcmp(token, "ERR")){              //Check for error
-            printf("Error\n");
+
+        if (!strcmp(token, "ERR")){ 
+            perror("TRS: Bad request");
             return 1;
         }
-         else if (!strcmp(token, "NTA")){              //Check for error
-            printf("No translation.\n");
+         else if (!strcmp(token, "NTA")){ 
+            perror("TRS: No translation");
             return 1;
         }
+
         token = strtok(NULL, SEPARATOR); // ditch the numWords
 
         while (i < nWords){
@@ -332,13 +297,15 @@ int connectTRS(char* message){
                     i++;
                 }
         printf("%s: %s \n", TRSname, buffer);
-        }
 
-
-
-
-    close(fdTCP);
-    return 0;
+        close(fdTCP);
+        return 0;
+    }      
+    else{
+        printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
+        close(fdTCP);
+        return 1;
+    }
 }
 
 int countWords(char* s){
@@ -357,3 +324,225 @@ int countWords(char* s){
  }
  return count;
 }
+
+
+
+/**********************************************************************
+                        FUNCTION sendFile
+receives the open file descriptor (fd) to send a file to, and the data 
+provided by the user (userInput) which consists of the type, file name,
+file size and file data. 
+Returns 0 if successful and 1 otherwise.
+***********************************************************************/
+
+int sendFile(int fd, char* userInput){
+    int n = 2, nleft, nwritten, nread, sizeData, indexData;
+    char request[8] = "TRQ ";
+    char* buffer;
+    char type[8];
+    char fileLengthStr[8];
+    FILE *file;
+    char fileName[32];
+    char fileData[BUFFER_SIZE];
+    int fileLength;
+    char* token;
+    char* ptr;
+
+    if (sscanf(userInput, "%s" "%s", type, fileName) != n){   // get the filename
+        printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
+        perror("Failed to get filename");
+        return 1;
+    }
+
+    if ((file = fopen(fileName, "rb")) == NULL){ //open the image file in binary
+        perror("Failed to open file");
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END); // Seek to the end of the file
+    fileLength = ftell(file); // Get the size from the end position
+    rewind(file);             // Go back to the start of the file
+
+    buffer = (char*) malloc (sizeof(char)*BUFFER_SIZE);
+    memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+
+    strcpy(buffer, request); // put the request code in the buffer
+    strcat(buffer, type);
+    strcat(buffer, " ");
+    strcat(buffer, fileName);
+    strcat(buffer, " ");
+    sprintf(fileLengthStr, "%d", fileLength);
+    strcat(buffer, fileLengthStr);
+    strcat(buffer, " ");
+
+    printf("%d Bytes to transmit\n", fileLength);
+
+    /************ SENDING THE FILE TO TRS **************/
+    // First, send the request code, type, file name and file length first
+
+    ptr = buffer;
+    nleft = strlen(buffer);
+
+    while(nleft > 0) {
+        nwritten = write(fd, ptr, nleft);
+        if (nwritten <= 0){
+            perror("Failed to send request to TRS");
+            return 1;
+        }
+        nleft -= nwritten;
+        ptr += nwritten;
+    }
+    // Next, read the file in chunks of BUFFER_SIZE and send in chunks to TRS
+    while (1){
+        memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+        n = fread(buffer, 1, BUFFER_SIZE, file); // Reads, stores in buffer and returns the total number of elements successfully read
+        ptr = buffer;
+        if (n == -1){
+            perror("Failed to read file");
+            return 1;
+        } 
+        else if (n == 0) break; // Leave the cycle when there's no more file data to read and send
+        nleft = n;
+        while(nleft > 0) {
+            if (nleft < BUFFER_SIZE){
+                strcat(buffer, "\n");
+                nleft++;
+            }
+            nwritten = write(fd, ptr, nleft);
+            if (nwritten == -1){
+                perror("Failed to write file to TRS");
+                return 1;
+            }
+            nleft -= nwritten;
+            ptr += nwritten;
+        }
+        if (n < BUFFER_SIZE) break;
+    }
+
+    printf("Sent file %s\n", fileName);
+
+    /**************** RECEIVING THE FILE FROM TRS *****************/
+
+    memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+    ptr = buffer;
+    nleft = BUFFER_SIZE;
+    
+
+    // First chunk received consists of request code, type, file name, file size and some data
+    while(nleft > 0){
+        nread = read(fd, ptr, nleft);
+        if (nread == -1){
+            perror("Failed to read file from TRS");
+            return 1;
+        }
+        else if (nread == 0) break; // Closed by TRS
+        nleft -= nread;
+        ptr += nread;
+    }
+
+    printf("%s\n", buffer );
+
+    token = strtok(buffer, SEPARATOR); // TRR
+    if (!token){
+        perror("No answer from TRS");
+        return 1;
+    }
+    else if (strcmp(token, "TRR")){
+        perror("Bad answer from TRS");
+        return 1;
+    }
+
+    token = strtok(NULL, SEPARATOR); // error message if present, if not, ditch the type
+    if (!token){
+        perror("No error code provided from TRS");
+        return 1;
+    }
+    else if (!strcmp(token, "NTA")){ 
+        perror("NTA: No translation from TRS");
+        return 1;
+    }
+    else if (!strcmp(token, "ERR")){ 
+        perror("ERR: Bad request to TRS");
+        return 1;
+    }
+
+    token = strtok(NULL, SEPARATOR); // get the file name
+    if (!token){
+        perror("No file name provided from TRS");
+        return 1;
+    }
+    strcpy(fileName, token); // store file name
+
+    token = strtok(NULL, SEPARATOR); // get file size
+    if (!token){
+        perror("No file size provided from TRS");
+        return 1;
+    }
+    strcpy(fileLengthStr, token); // store file size
+    fileLength = atoi(token); // file size as int
+    
+    /*token = strtok(NULL, SEPARATOR); // get the file data
+    if (!token){
+        perror("No file data provided from TRS");
+        return 1;
+    }*/
+
+    
+    indexData = strlen(request) + strlen(type) + strlen(fileName) + strlen(fileLengthStr) + 3;
+    sizeData = BUFFER_SIZE - indexData;
+    fileLength -= sizeData; // used in next read cycle, take the bytes already written to file
+
+    file = fopen(fileName, "wb");
+    fwrite(&buffer[indexData], 1, sizeData, file);
+
+    
+    // Now we read the rest of the file data in chunks of BUFFER_SIZE
+
+    memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+    ptr = buffer;
+    nleft = BUFFER_SIZE;
+    while (1){
+        memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+        ptr = buffer;
+        nleft = BUFFER_SIZE;  
+        while(nleft > 0) {
+            nread = read(fd, ptr, nleft);
+            //printf("%d\n", nread);
+            if (nread == -1){
+                perror("Failed to read file from TRS");
+                return 1;
+            }
+            else if (nread == 0) break; // Closed by TRS
+            
+            if (nread > fileLength){    // if TRS sent more bytes than the size of file, discard exceeding bytes
+                nread = fileLength;
+            }
+            fileLength -= nread;
+
+            n = fwrite(buffer, 1, nread, file); // Writes from buffer and returns the total number of elements successfully written
+            
+            if (n == -1){
+                perror("Failed to write file");
+                return 1;
+            }
+            else if (n < nread){
+                perror("Failed to write all file data\n");
+                return 1;
+            }             
+            nleft -= nread;
+            ptr += nread;
+        }
+        if (nread == 0) break; // Closed by TRS
+    }
+
+    // Check if the file size written matches the file size announced by TRS
+    fseek(file, 0, SEEK_END); // Seek to the end of the file
+    fileLength = ftell(file); // Get the size from the end position
+    rewind(file);             // Go back to the start of the file
+    
+    printf("Received file %s\n%d Bytes\n", fileName, fileLength);
+    
+    fclose(file);
+    return 0;
+    }
+
