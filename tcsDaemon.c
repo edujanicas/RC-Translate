@@ -39,7 +39,7 @@ int main(int argc, char** argv) {
 		port = *argv[2];
 	}
 
-	trsServers = fopen("languages.txt", "a+");
+	trsServers = fopen("languages.txt", "w+");
 	if (trsServers == NULL) {
 		perror("Error opening trsServers.txt");
 		exit(EXIT_FAILURE);
