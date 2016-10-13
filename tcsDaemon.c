@@ -11,9 +11,11 @@
 #include "tcsCore.c"
 
 int fd;
+FILE* trsServers;
 
 static void quitTCS(int signo) {
 	printf("Will now kill TCS\n");
+	fclose(trsServers);
 	close(fd);
 	exit(0);
 }
@@ -37,14 +39,20 @@ int main(int argc, char** argv) {
 		port = *argv[2];
 	}
 
+	trsServers = fopen("languages.txt", "a+");
+	if (trsServers == NULL) {
+		perror("Error opening trsServers.txt");
+		exit(EXIT_FAILURE);
+	}
+
 	nServers = malloc(sizeof(int));
-	*nServers = 0;
+	*nServers = 0; // The number of servers will be passed as a reference
 
 	if(gethostname(buffer, 512)==-1) {
 		perror("Could not get host name");
 		exit(1);
 	}
-	strcat(buffer, ".tecnico.ulisboa.pt");
+	strcat(buffer, ".tecnico.ulisboa.pt"); // Only valid inside IST
 	printf("Official host name: %s\n", buffer);
 	if((h=gethostbyname(buffer))==NULL) {
 		perror("Could not get host IP");
@@ -55,7 +63,7 @@ int main(int argc, char** argv) {
 
 	if((fd = socket(AF_INET, SOCK_DGRAM, 0)) == -1 ) perror("Error creating socket");
 
-  memset((void*)&response, (int)'\0', sizeof(response));
+  	memset((void*)&response, (int)'\0', sizeof(response));
 	memset((void*)&addr, (int)'\0', sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -72,11 +80,14 @@ int main(int argc, char** argv) {
 
 		addrlen = sizeof(addr);
 		nread = recvfrom(fd, buffer, 128, 0, (struct sockaddr*)&addr, (socklen_t *)&addrlen);
-		if(nread == -1) perror("Error on receiving the message");
+		if(nread == -1) {
+			perror("Error on receiving the message");
+			continue;
+		} // Error handling
     	printf("Received message from %s: %s", inet_ntoa(addr.sin_addr), buffer);
 
 		// PROCESS THE INPUT MESSEGE AND FILL THE RESULT IN RESPONSE
-    		tcsCore(buffer, response, nServers);
+    	tcsCore(buffer, response, nServers, trsServers);
 		// REPLY
 		ret = sendto(fd, response, strlen(response), 0, (struct sockaddr*)&addr, addrlen);
 		if(ret == -1) perror("Error echoing the answer");

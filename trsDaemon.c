@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
 	// Variable declarations
 	int i, fd, n, addrlen, newfd, nw, ret;
 	struct sockaddr_in addr;
-	char buffer[128], response[2048] = "", TCSname[32] = "localhost";
+	char buffer[128], response[2048] = "";
 	char *ptr;
 	pid_t pid;
 
@@ -97,13 +97,6 @@ int main(int argc, char** argv) {
 	}
 	strcpy(language, argv[1]);
 
-	// Start by informing the TCS that is now providing translations
-	n = informTCS(TRSport, TCSport, TCSname, 1);
-	if (n == -1) {
-		printf("TCS refused connection, will now exit.\n");
-		exit(1);
-	} // Error handling
-
 	// TCP Connection
 	if((fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 		perror("Error creating socket");
@@ -118,6 +111,13 @@ int main(int argc, char** argv) {
 	if(bind(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
 		perror("Could not bind");
 		close(fd);
+		exit(1);
+	} // Error handling
+
+	// Start by informing the TCS that is now providing translations
+	n = informTCS(TRSport, TCSport, TCSname, 1);
+	if (n == -1) {
+		printf("TCS refused connection, will now exit.\n");
 		exit(1);
 	} // Error handling
 
@@ -250,6 +250,11 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 	if(!strcmp(buffer, "SRR NOK\n")) {
 		close(fd);
 		printf("Wasn't accepted as a valid server\n");
+		exit(0);
+	}
+	if(!strcmp(buffer, "SUR NOK\n")) {
+		close(fd);
+		printf("Tried to disconnect from a wrong TCS\n");
 		exit(0);
 	}
 
