@@ -23,11 +23,12 @@ int sendFile(int fd, char* userInput);
 int main(int argc, char** argv) {
 
     // Variable declarations
-    int fdUDP, n, addrlen, numLang, i, TCSport = 58000;
+    int fdUDP, n, addrlen, numLang, i, TCSport = 58021;
     struct sockaddr_in addr;
     struct hostent *hostptr;
     char buffer[128], instruction[32], TCSname[32] = "localhost";
     char languages[32][99];
+	char *token;
 
     // Argument reading
     if(argc != 1 && argc != 3 && argc != 5) {
@@ -105,12 +106,22 @@ int main(int argc, char** argv) {
                 break;
             } // Error handling
 
-            numLang = atoi(strtok(NULL, SEPARATOR));
+			token = strtok(NULL, SEPARATOR); // token will retain the number of languages
+			if (!token) {
+				printf("Error on TCS reply, please try again\n");
+				continue;
+			} // Error handling
+			numLang = atoi(token);
             i = 1;
 
             printf("\n----- Available languages: -----\n\n");
             while (i <= numLang){
-                strcpy(languages[i-1], strtok(NULL, SEPARATOR));
+				token = strtok(NULL, SEPARATOR);
+				if (!token) {
+					printf("Error on TCS reply, please try again\n");
+					continue;
+				} // Error handling
+                strcpy(languages[i-1], token);
                 printf("%d -> %s\n", i, languages[i-1]);
                 i++;
             }
@@ -138,7 +149,7 @@ int main(int argc, char** argv) {
 
 
         } else {
-            printf("Available commands are: list, request\n");
+            printf("Available commands are: list, request, exit\n");
         }
 
         printf(">> ");
@@ -154,8 +165,8 @@ int main(int argc, char** argv) {
 
 /*****************************************************************************
                             FUNCTION connectTRS
-Receives the request answer with the TRS info from the TCS and creates a TCP 
-socket to the TRS. Processes the request if text translation, if file translation 
+Receives the request answer with the TRS info from the TCS and creates a TCP
+socket to the TRS. Processes the request if text translation, if file translation
 requested it calls function sendFile.
 Returns 0 if successful and 1 otherwise.
 ******************************************************************************/
@@ -171,12 +182,12 @@ int connectTRS(char* message){
     char *ptr;
     char TRSname[32] = "localhost";
     char request[8] = "TRQ ";
-    char* buffer;
+    char buffer[512];
     char userInput[320];
     char type[8];
     char nWordsStr[8];
     char* token;
-    int TRSport = 59000;
+    int TRSport = 59021;
 
     // TCP Socket
     if ((fdTCP = socket(AF_INET, SOCK_STREAM, 0)) == -1){
@@ -198,8 +209,8 @@ int connectTRS(char* message){
     addr.sin_port = htons(TRSport);
 
     // connect to TRS
-    if ((n = connect(fdTCP, (struct sockaddr*)&addr, sizeof(addr))) == -1) { 
-        perror("Failed to connect"); 
+    if ((n = connect(fdTCP, (struct sockaddr*)&addr, sizeof(addr))) == -1) {
+        perror("Failed to connect");
         return 1;
     }
 
@@ -213,15 +224,15 @@ int connectTRS(char* message){
     // the type has to be text(t) or file (f)
     // if file, it's dealt by function sendFile
     if (!strcmp(type, "f")){
-        if (sendFile(fdTCP, userInput)!=0)
+        if (sendFile(fdTCP, userInput)!=0) {
             perror("Error at function sendFile");
             close(fdTCP);
             return 1;
-            }
+		}
+    }
 
     else if (!strcmp(type, "t")){
         nWords = countWords(userInput) - 1; // remove type from count
-        buffer = (char*) malloc (sizeof(char)*BUFFER_SIZE);
         memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
 
         strcpy(buffer, request); // put the request code in the buffer
@@ -235,7 +246,7 @@ int connectTRS(char* message){
 
         // Send translation request and text to translate to TRS
         ptr = buffer;
-        nleft = strlen(buffer);  
+        nleft = strlen(buffer);
 
         while(nleft > 0) {
             nwritten = write(fdTCP, ptr, nleft);
@@ -265,7 +276,7 @@ int connectTRS(char* message){
             ptr += nread;
         }
 
-        if (nleft <= 0 || !buffer){
+        if (nleft <= 0){
             perror("Failed to receive all data");
             return 1;
         }
@@ -280,11 +291,11 @@ int connectTRS(char* message){
 
         token = strtok(NULL, SEPARATOR); // error message if present, if not, ditch the type
 
-        if (!strcmp(token, "ERR")){ 
+        if (!strcmp(token, "ERR")){
             perror("TRS: Bad request");
             return 1;
         }
-         else if (!strcmp(token, "NTA")){ 
+         else if (!strcmp(token, "NTA")){
             perror("TRS: No translation");
             return 1;
         }
@@ -300,12 +311,13 @@ int connectTRS(char* message){
 
         close(fdTCP);
         return 0;
-    }      
+    }
     else{
         printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
         close(fdTCP);
         return 1;
     }
+	return 1;
 }
 
 int countWords(char* s){
@@ -329,9 +341,9 @@ int countWords(char* s){
 
 /**********************************************************************
                         FUNCTION sendFile
-receives the open file descriptor (fd) to send a file to, and the data 
+receives the open file descriptor (fd) to send a file to, and the data
 provided by the user (userInput) which consists of the type, file name,
-file size and file data. 
+file size and file data.
 Returns 0 if successful and 1 otherwise.
 ***********************************************************************/
 
@@ -400,7 +412,7 @@ int sendFile(int fd, char* userInput){
         if (n == -1){
             perror("Failed to read file");
             return 1;
-        } 
+        }
         else if (n == 0) break; // Leave the cycle when there's no more file data to read and send
         nleft = n;
         while(nleft > 0) {
@@ -426,7 +438,7 @@ int sendFile(int fd, char* userInput){
     memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
     ptr = buffer;
     nleft = BUFFER_SIZE;
-    
+
 
     // First chunk received consists of request code, type, file name, file size and some data
     while(nleft > 0){
@@ -457,11 +469,11 @@ int sendFile(int fd, char* userInput){
         perror("No error code provided from TRS");
         return 1;
     }
-    else if (!strcmp(token, "NTA")){ 
+    else if (!strcmp(token, "NTA")){
         perror("NTA: No translation from TRS");
         return 1;
     }
-    else if (!strcmp(token, "ERR")){ 
+    else if (!strcmp(token, "ERR")){
         perror("ERR: Bad request to TRS");
         return 1;
     }
@@ -480,14 +492,14 @@ int sendFile(int fd, char* userInput){
     }
     strcpy(fileLengthStr, token); // store file size
     fileLength = atoi(token); // file size as int
-    
+
     /*token = strtok(NULL, SEPARATOR); // get the file data
     if (!token){
         perror("No file data provided from TRS");
         return 1;
     }*/
 
-    
+
     indexData = strlen(request) + strlen(type) + strlen(fileName) + strlen(fileLengthStr) + 3;
     sizeData = BUFFER_SIZE - indexData;
     fileLength -= sizeData; // used in next read cycle, take the bytes already written to file
@@ -495,7 +507,7 @@ int sendFile(int fd, char* userInput){
     file = fopen(fileName, "wb");
     fwrite(&buffer[indexData], 1, sizeData, file);
 
-    
+
     // Now we read the rest of the file data in chunks of BUFFER_SIZE
 
     memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
@@ -504,7 +516,7 @@ int sendFile(int fd, char* userInput){
     while (1){
         memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
         ptr = buffer;
-        nleft = BUFFER_SIZE;  
+        nleft = BUFFER_SIZE;
         while(nleft > 0) {
             nread = read(fd, ptr, nleft);
             //printf("%d\n", nread);
@@ -513,14 +525,14 @@ int sendFile(int fd, char* userInput){
                 return 1;
             }
             else if (nread == 0) break; // Closed by TRS
-            
+
             if (nread > fileLength){    // if TRS sent more bytes than the size of file, discard exceeding bytes
                 nread = fileLength;
             }
             fileLength -= nread;
 
             n = fwrite(buffer, 1, nread, file); // Writes from buffer and returns the total number of elements successfully written
-            
+
             if (n == -1){
                 perror("Failed to write file");
                 return 1;
@@ -528,7 +540,7 @@ int sendFile(int fd, char* userInput){
             else if (n < nread){
                 perror("Failed to write all file data\n");
                 return 1;
-            }             
+            }
             nleft -= nread;
             ptr += nread;
         }
@@ -539,10 +551,9 @@ int sendFile(int fd, char* userInput){
     fseek(file, 0, SEEK_END); // Seek to the end of the file
     fileLength = ftell(file); // Get the size from the end position
     rewind(file);             // Go back to the start of the file
-    
+
     printf("Received file %s\n%d Bytes\n", fileName, fileLength);
-    
+
     fclose(file);
     return 0;
     }
-
