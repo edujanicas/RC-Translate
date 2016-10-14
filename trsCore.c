@@ -118,7 +118,7 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName,
 		rewind(translation); // Position the stream at the beggining of the file
 
 		file = fopen(word, "rb");
-		fseek(file, 0, SEEK_END); // Seek to the end of the file		
+		fseek(file, 0, SEEK_END); // Seek to the end of the file
 		sprintf(fileSizeSTR, "%ld", ftell(file));
 		fclose(file);
 		strcat(reply, fileSizeSTR);
@@ -170,7 +170,6 @@ void continueWriting(char* response, char* fileName, int* doWrite, int* leftInFi
 		sscanf(&response[6], "%s" "%d", fileName, leftInFile);
 		memset(response, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
 		file = fopen(fileName, "rb");
-		printf("%d Bytes to transmit\n", *leftInFile);
 		fread(response, 1, BUFFER_SIZE, file);
 		*firstExec = 0;
 	}
@@ -180,13 +179,13 @@ void continueWriting(char* response, char* fileName, int* doWrite, int* leftInFi
 
 		fseek(file, -(*leftInFile), SEEK_END); // Seek to the end of the file
 		fread(response, 1, min(BUFFER_SIZE, *leftInFile), file);
-		
+
 		if (*leftInFile <= BUFFER_SIZE) {
 			*doWrite = 0;
 			strcpy(&response[*leftInFile], "\n");
 		}
 	}
-	*leftInFile -= BUFFER_SIZE;	
+	*leftInFile -= BUFFER_SIZE;
 
 	fclose(file);
 }

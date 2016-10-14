@@ -44,7 +44,10 @@ int main(int argc, char** argv) {
 	// Variable initialization
 	TCSport = 58021;
 	TRSport = 59021;
-	strcpy(TCSname, "localhost");
+	if(gethostname(TCSname, 32)==-1) {
+		perror("Could not get host name");
+		exit(1);
+	}
 
 	// Mallocs
 	doRead = malloc(sizeof(int));
@@ -174,7 +177,7 @@ int main(int argc, char** argv) {
 					break;
 				}
 
-				printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
+				printf("Received message from: %s\n", inet_ntoa(addr.sin_addr));
 
 				// Send to core to process message
 
@@ -202,7 +205,7 @@ int main(int argc, char** argv) {
 						}
 					}
 				}
-				printf("Sent message to: %s: %sSize: %lu\n", inet_ntoa(addr.sin_addr), response, strlen(response));
+				printf("Sent message to: %s Size: %lu\n", inet_ntoa(addr.sin_addr), strlen(response));
 
 				close(newfd);
 				exit(0);
