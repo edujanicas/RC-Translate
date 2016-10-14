@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
 					break;
 				}
 
-				// printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
+				printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
 
 				// Send to core to process message
 
@@ -190,7 +190,6 @@ int main(int argc, char** argv) {
 						perror("Error retrieving message");
 						break;
 					}
-					printf("Response: %s\n", response);
 					nleft -= nwritten;
 					ptr += nwritten;
 					if ((*doWrite) && (nleft == 0)) {
@@ -198,6 +197,9 @@ int main(int argc, char** argv) {
 							doRead, doWrite, firstExec, leftInFile);
 						ptr = response;
 						nleft = min(BUFFER_SIZE, *leftInFile);
+						if (nleft < 0) {
+							nleft += BUFFER_SIZE;
+						}
 					}
 				}
 				printf("Sent message to: %s: %sSize: %lu\n", inet_ntoa(addr.sin_addr), response, strlen(response));
@@ -231,7 +233,7 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 		perror("Could not get host name");
 		exit(1);
 	}
-	strcat(buffer, ".tecnico.ulisboa.pt");
+	//strcat(buffer, ".tecnico.ulisboa.pt");
 	if((h=gethostbyname(buffer))==NULL) {
 		perror("Could not get host IP");
 		exit(1);

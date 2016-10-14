@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 		perror("Could not get host name");
 		exit(1);
 	}
-	strcat(buffer, ".tecnico.ulisboa.pt"); // Only valid inside IST
+	//strcat(buffer, ".tecnico.ulisboa.pt"); // Only valid inside IST
 	printf("Official host name: %s\n", buffer);
 	if((h=gethostbyname(buffer))==NULL) {
 		perror("Could not get host IP");

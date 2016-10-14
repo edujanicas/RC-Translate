@@ -19,6 +19,8 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName,
 	FILE *translation = NULL;
 	size_t len = 0;
 	ssize_t read;
+	char fileSizeSTR[32];
+	FILE* file;
 
 	if (*doRead) {
 		continueReading(buffer, fileName, doRead, doWrite, leftInFile);
@@ -69,8 +71,8 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName,
 					word = strtok_r(line, " \n", &brkb); // Then get the word
 					if (!strcmp(instruction, word)) { // If it's the required one
 						word = strtok_r(NULL, " \n", &brkb);
-						strcat(reply, word);
 						strcat(reply, " "); // Append a whitespace between words
+						strcat(reply, word);
 						count++;
 						break;
 					}
@@ -115,9 +117,17 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName,
 		}
 		rewind(translation); // Position the stream at the beggining of the file
 
+		file = fopen(word, "rb");
+		fseek(file, 0, SEEK_END); // Seek to the end of the file		
+		sprintf(fileSizeSTR, "%ld", ftell(file));
+		fclose(file);
+		strcat(reply, fileSizeSTR);
+		strcat(reply, " ");
+
 		if (count == 0) {
 			strcpy(reply, "TRR NTA");
 		}
+
 	}
 }
 fclose(translation);
@@ -154,28 +164,14 @@ void continueReading(char* buffer, char* fileName, int* doRead, int* doWrite, in
 
 void continueWriting(char* response, char* fileName, int* doWrite, int* leftInFile, int* firstExec) {
 
-	char fileSizeSTR[32];
-	int indexData, sizeData, fileSize;
 	FILE* file;
 
 	if (*firstExec) {
-		if (sscanf(&response[6], "%s", fileName) != 1){   // get the filename
-			printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
-			perror("Failed to get filename");
-			return;
-		}
+		sscanf(&response[6], "%s" "%d", fileName, leftInFile);
+		memset(response, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
 		file = fopen(fileName, "rb");
-		fseek(file, 0, SEEK_END); // Seek to the end of the file
-		*leftInFile = ftell(file); // Get the size from the end position
-		rewind(file);             // Go back to the start of the file
-		sprintf(fileSizeSTR, "%d", *leftInFile);
-		strcpy(response, fileSizeSTR);
-		strcat(response, " ");
 		printf("%d Bytes to transmit\n", *leftInFile);
-		indexData = strlen(response) - 1;
-		sizeData = BUFFER_SIZE - indexData;
-		fwrite(&response[indexData], 1, sizeData, file);
-		*leftInFile -= sizeData;
+		fread(response, 1, BUFFER_SIZE, file);
 		*firstExec = 0;
 	}
 	else {
@@ -184,11 +180,13 @@ void continueWriting(char* response, char* fileName, int* doWrite, int* leftInFi
 
 		fseek(file, -(*leftInFile), SEEK_END); // Seek to the end of the file
 		fread(response, 1, min(BUFFER_SIZE, *leftInFile), file);
-		printf("%d\n", min(BUFFER_SIZE, *leftInFile));
+		
 		if (*leftInFile <= BUFFER_SIZE) {
 			*doWrite = 0;
+			strcpy(&response[*leftInFile], "\n");
 		}
-		*leftInFile -= BUFFER_SIZE;
 	}
+	*leftInFile -= BUFFER_SIZE;	
+
 	fclose(file);
 }

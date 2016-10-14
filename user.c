@@ -343,7 +343,6 @@ int sendFile(int fd, char* userInput){
     char fileLengthStr[8];
     FILE *file;
     char fileName[32];
-    char fileData[BUFFER_SIZE];
     int fileLength;
     char* token;
     char* ptr;
@@ -440,8 +439,6 @@ int sendFile(int fd, char* userInput){
         ptr += nread;
     }
 
-    printf("%s\n", buffer );
-
     token = strtok(buffer, SEPARATOR); // TRR
     if (!token){
         perror("No answer from TRS");
@@ -507,7 +504,6 @@ int sendFile(int fd, char* userInput){
         nleft = BUFFER_SIZE;  
         while(nleft > 0) {
             nread = read(fd, ptr, nleft);
-            //printf("%d\n", nread);
             if (nread == -1){
                 perror("Failed to read file from TRS");
                 return 1;
