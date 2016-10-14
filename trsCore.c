@@ -45,10 +45,10 @@ void trsCore(char* buffer, char* reply ,char* language) {
 			strcpy(numberOfWordsStr, strtok_r(NULL, " \n", &brkt));
 			numberOfWords = atoi(numberOfWordsStr);
 			strcat(reply, numberOfWordsStr);
-			count = 0;
-			
+
 			for(n = 0; n < numberOfWords; n++) {
 
+				count = 0;
 				instruction = strtok_r(NULL, " \n", &brkt); // instruction retains the word to be translated
 
 				while ((read = getline(&line, &len, translation)) != -1) {

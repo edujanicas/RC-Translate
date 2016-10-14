@@ -202,7 +202,7 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 		perror("Could not get host name");
 		exit(1);
 	}
-	strcat(buffer, ".tecnico.ulisboa.pt");
+	//strcat(buffer, ".tecnico.ulisboa.pt");
 	if((h=gethostbyname(buffer))==NULL) {
 		perror("Could not get host IP");
 		exit(1);
