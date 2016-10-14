@@ -23,7 +23,7 @@ int sendFile(int fd, char* userInput);
 int main(int argc, char** argv) {
 
     // Variable declarations
-    int fdUDP, n, addrlen, numLang, i, TCSport = 58000;
+    int fdUDP, n, addrlen, numLang, i, TCSport = 58021;
     struct sockaddr_in addr;
     struct hostent *hostptr;
     char buffer[128], instruction[32], TCSname[32] = "localhost";
@@ -517,10 +517,9 @@ int sendFile(int fd, char* userInput){
             if (nread > fileLength){    // if TRS sent more bytes than the size of file, discard exceeding bytes
                 nread = fileLength;
             }
-            fileLength -= nread;
-
-            n = fwrite(buffer, 1, nread, file); // Writes from buffer and returns the total number of elements successfully written
             
+            n = fwrite(buffer, 1, nread, file); // Writes from buffer and returns the total number of elements successfully written
+
             if (n == -1){
                 perror("Failed to write file");
                 return 1;
@@ -528,7 +527,8 @@ int sendFile(int fd, char* userInput){
             else if (n < nread){
                 perror("Failed to write all file data\n");
                 return 1;
-            }             
+            }
+            fileLength -= n;             
             nleft -= nread;
             ptr += nread;
         }

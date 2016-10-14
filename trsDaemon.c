@@ -10,6 +10,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include "trsCore.c"
+#define BUFFER_SIZE 512
 
 #define max(A, B) ((A) > (B)?(A):(B))
 
@@ -25,11 +26,15 @@ static void quitTRS(int signo);
 int main(int argc, char** argv) {
 
 	// Variable declarations
-	int i, fd, n, addrlen, newfd, nw, ret;
+	int i, fd, n, addrlen, newfd, nwritten, nread, nleft, ret;
 	struct sockaddr_in addr;
-	char buffer[128], response[2048] = "";
+	char buffer[BUFFER_SIZE], response[BUFFER_SIZE] = "";
 	char *ptr;
+	int *doRead;
+	int *doWrite;
+	int *leftInFile;
 	pid_t pid;
+	char fileName[32];
 
 	// Signal handling
 	void (*old_handler)(int); //Interrupt handler
@@ -40,6 +45,11 @@ int main(int argc, char** argv) {
 	TCSport = 58021;
 	TRSport = 59021;
 	strcpy(TCSname, "localhost");
+
+	// Mallocs
+	doRead = malloc(sizeof(int));
+	doWrite = malloc(sizeof(int));
+	leftInFile = malloc(sizeof(int));
 
 	// Argument reading
 	if(argc != 2 && argc != 4 && argc != 6 && argc != 8) {
@@ -148,27 +158,37 @@ int main(int argc, char** argv) {
 
 			close(fd);
 
-			while((n = read(newfd, buffer, 128)) != 0) {
+			memset(buffer, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+	        ptr = buffer;
+	        nleft = BUFFER_SIZE;
 
-				if (n == -1) {
+	        &doRead = 0;
+	        while((nread = read(newfd, buffer, BUFFER_SIZE)) != 0) {
+
+				if (nread == -1) {
 					perror("Error while reading the message");
 					break;
 				}
-				printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
 
-				// Send to core to process message
-				trsCore(buffer, response, language);
 
-				ptr = &response[0];
-				n = strlen(response);
 
-				while (n > 0) {
-					if ((nw = write(newfd, ptr, n)) <= 0) {
+			printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
+
+			// Send to core to process message
+
+			trsCore(buffer, response, language, fileName, doRead, doWrite, leftInFile);
+			if (&doRead) continue; // if the core puts this flag as 1, the daemon has to keep reading
+
+				ptr = response;
+				nleft = strlen(response);
+
+				while (nleft > 0) {
+					if ((nwritten = write(newfd, ptr, nleft)) <= 0) {
 						perror("Error retrieving message");
 						break;
 					}
-					n -= nw;
-					ptr += nw;
+					nleft -= nwritten;
+					ptr += nwritten;
 				}
 
 				printf("Sent message to: %s: %sSize: %lu\n", inet_ntoa(addr.sin_addr), response, strlen(response));
