@@ -50,6 +50,7 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName,
 			strcpy(fileName, "text_translation-\0");
 			strcat(fileName, language);
 			strcat(fileName, ".txt\0");
+			printf("%s\n", fileName);
 			translation = fopen(fileName, "r");
 			if (translation == NULL) {
 				perror("Error opening text_translation.txt");
