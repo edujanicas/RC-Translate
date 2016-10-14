@@ -13,6 +13,8 @@
 #define BUFFER_SIZE 512
 
 #define max(A, B) ((A) > (B)?(A):(B))
+#define min(A, B) ((A) < (B)?(A):(B))
+
 
 // Global variables
 extern int errno;
@@ -30,9 +32,7 @@ int main(int argc, char** argv) {
 	struct sockaddr_in addr;
 	char buffer[BUFFER_SIZE], response[BUFFER_SIZE] = "";
 	char *ptr;
-	int *doRead;
-	int *doWrite;
-	int *leftInFile;
+	int *doRead, *doWrite, *firstExec, *leftInFile;
 	pid_t pid;
 	char fileName[32];
 
@@ -49,6 +49,7 @@ int main(int argc, char** argv) {
 	// Mallocs
 	doRead = malloc(sizeof(int));
 	doWrite = malloc(sizeof(int));
+	firstExec = malloc(sizeof(int));
 	leftInFile = malloc(sizeof(int));
 
 	// Argument reading
@@ -140,8 +141,8 @@ int main(int argc, char** argv) {
 	while(1) {
 		// TCP SERVER
 
-		memset((void*)&buffer, (int)'\0', sizeof(buffer));
-		memset((void*)&response, (int)'\0', sizeof(response));
+		memset((void*)&buffer, (int)'\0', BUFFER_SIZE);
+		memset((void*)&response, (int)'\0', BUFFER_SIZE);
 		addrlen = sizeof(addr);
 
 		do newfd = accept(fd, (struct sockaddr*)&addr, (socklen_t *)&addrlen);
@@ -162,7 +163,10 @@ int main(int argc, char** argv) {
 	        ptr = buffer;
 	        nleft = BUFFER_SIZE;
 
-	        &doRead = 0;
+	        *doRead = 0;
+			*doWrite = 0;
+			*firstExec = 0;
+
 	        while((nread = read(newfd, buffer, BUFFER_SIZE)) != 0) {
 
 				if (nread == -1) {
@@ -170,14 +174,13 @@ int main(int argc, char** argv) {
 					break;
 				}
 
+				// printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
 
+				// Send to core to process message
 
-			printf("Received message from: %s: %s", inet_ntoa(addr.sin_addr), buffer);
-
-			// Send to core to process message
-
-			trsCore(buffer, response, language, fileName, doRead, doWrite, leftInFile);
-			if (&doRead) continue; // if the core puts this flag as 1, the daemon has to keep reading
+				trsCore(buffer, response, language, fileName,
+					doRead, doWrite, firstExec, leftInFile);
+				if (*doRead) continue; // if the core puts this flag as 1, the daemon has to keep reading
 
 				ptr = response;
 				nleft = strlen(response);
@@ -187,10 +190,16 @@ int main(int argc, char** argv) {
 						perror("Error retrieving message");
 						break;
 					}
+					printf("Response: %s\n", response);
 					nleft -= nwritten;
 					ptr += nwritten;
+					if ((*doWrite) && (nleft == 0)) {
+						trsCore(buffer, response, language, fileName,
+							doRead, doWrite, firstExec, leftInFile);
+						ptr = response;
+						nleft = min(BUFFER_SIZE, *leftInFile);
+					}
 				}
-
 				printf("Sent message to: %s: %sSize: %lu\n", inet_ntoa(addr.sin_addr), response, strlen(response));
 
 				close(newfd);
@@ -222,7 +231,7 @@ int informTCS(int TRSport, int TCSport, char* TCSname, short option) {
 		perror("Could not get host name");
 		exit(1);
 	}
-	//strcat(buffer, ".tecnico.ulisboa.pt");
+	strcat(buffer, ".tecnico.ulisboa.pt");
 	if((h=gethostbyname(buffer))==NULL) {
 		perror("Could not get host IP");
 		exit(1);

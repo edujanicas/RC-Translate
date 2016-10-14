@@ -4,19 +4,31 @@
 #define BUFFER_SIZE 512
 #define min(A, B) ((A) < (B)?(A):(B))
 
-void continueReading(char* buffer, char* fileName, int* doRead, int* leftInFile);
-void trsCore(char* buffer, char* reply ,char* language, char* fileName, int* doRead, int* doWrite, int* leftInFile) {
+void continueReading(char* buffer, char* fileName, int* doRead, int* doWrite, int* leftInFile);
+void continueWriting(char* response, char* fileName, int* doWrite, int* leftInFile, int* firstExec);
+
+void trsCore(char* buffer, char* reply ,char* language, char* fileName,
+	int* doRead, int* doWrite, int* firstExec, int* leftInFile) {
 
 	char *instruction, *word;
 	char *line = NULL;
 	char *brkt, *brkb;
 	char numberOfWordsStr[2];
+	char textFile[32];
 	int numberOfWords, n, count;
 	FILE *translation = NULL;
 	size_t len = 0;
 	ssize_t read;
 
-	if (&doRead) continueReading(buffer, fileName, doRead, leftInFile);
+	if (*doRead) {
+		continueReading(buffer, fileName, doRead, doWrite, leftInFile);
+		return;
+	}
+	if (*doWrite) {
+		continueWriting(reply, fileName, doWrite, leftInFile, firstExec);
+		return;
+	}
+
 	strcpy(reply, "ERR\n\0");
 
 	instruction = strtok_r(buffer, " \n", &brkt);
@@ -57,8 +69,8 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName, int* doR
 					word = strtok_r(line, " \n", &brkb); // Then get the word
 					if (!strcmp(instruction, word)) { // If it's the required one
 						word = strtok_r(NULL, " \n", &brkb);
-						strcat(reply, " "); // Append a whitespace between words
 						strcat(reply, word);
+						strcat(reply, " "); // Append a whitespace between words
 						count++;
 						break;
 					}
@@ -70,31 +82,33 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName, int* doR
 				}
 			}
 			strcat(reply, "\n");
-		} 
+		}
 	else if (!strcmp(instruction, "f")) {
 		strcpy(fileName, strtok_r(NULL, " \n", &brkt));  // get the file name to translate
-		continueReading(buffer, fileName, doRead, leftInFile);
-		// Answer
-		strcpy(fileName, "file_translation-\0");
-		strcat(fileName, language);
-		strcat(fileName, ".txt\0");
-		translation = fopen(fileName, "r");
-		
+		continueReading(buffer, fileName, doRead, doWrite, leftInFile);
+
+		// Answer -------------------------------
+		*firstExec = 1;
+		strcpy(textFile, "file_translation-\0");
+		strcat(textFile, language);
+		strcat(textFile, ".txt\0");
+		translation = fopen(textFile, "r");
+
 		if (translation == NULL) {
-			perror("Error opening text_translation.txt");
+			perror("Error opening file_translation.txt");
 			strcpy(reply, "TRR ERR\n\0");
 			return;
 		}
-		strcpy(reply, "TRR t ");
+		strcpy(reply, "TRR f ");
 
 		count = 0;
-		
+
 		while ((read = getline(&line, &len, translation)) != -1) {
-			word = strtok_r(line, " \n", &brkb); // Then get the word
-			if (!strcmp(instruction, word)) { // If it's the required one
+			word = strtok_r(line, " \n", &brkb); // Then get the file
+			if (!strcmp(fileName, word)) { // If it's the required one
 				word = strtok_r(NULL, " \n", &brkb);
-				strcat(reply, " "); // Append a whitespace between words
 				strcat(reply, word);
+				strcat(reply, " ");
 				count++;
 				break;
 			}
@@ -104,39 +118,77 @@ void trsCore(char* buffer, char* reply ,char* language, char* fileName, int* doR
 		if (count == 0) {
 			strcpy(reply, "TRR NTA");
 		}
-
-		
-
-
 	}
 }
 fclose(translation);
 if (line) free(line);
 }
 
-void continueReading(char* buffer, char* fileName, int* doRead, int* leftInFile) {
-	char* token;
+void continueReading(char* buffer, char* fileName, int* doRead, int* doWrite, int* leftInFile) {
 	char fileSizeSTR[32];
 	int indexData, sizeData;
-	FILE* file
+	FILE* file;
 
-	file = fopen(fileName, "wb");
+	file = fopen(fileName, "ab");
 
-	if (!doRead){
+	if (!(*doRead)){
 		indexData = strlen(fileName) + 7;
-		strcpy(fileSizeSTR, strtok(&buffer[indexData]));
-		&leftInFile = atoi(fileSizeSTR);
+		strcpy(fileSizeSTR, strtok(&buffer[indexData], " \n"));
+		*leftInFile = atoi(fileSizeSTR);
 		indexData += strlen(fileSizeSTR) + 1;
 		sizeData = BUFFER_SIZE - indexData;
 		fwrite(&buffer[indexData], 1, sizeData, file);
-		&doRead = 1;
-		&leftInFile -= sizeData;
+		*doRead = 1;
+		*leftInFile -= sizeData;
 	}
 	else {
-		fwrite(buffer, min(BUFFER_SIZE, &leftInFile), file);
-		if (&leftInFile <= BUFFER_SIZE) &doRead = 0;
-		&leftInFile -= BUFFER_SIZE;
+		fwrite(buffer, 1, min(BUFFER_SIZE, *leftInFile), file);
+		if (*leftInFile <= BUFFER_SIZE) {
+			*doRead = 0;
+			*doWrite = 1;
+		}
+		*leftInFile -= BUFFER_SIZE;
 	}
 	fclose(file);
 }
 
+void continueWriting(char* response, char* fileName, int* doWrite, int* leftInFile, int* firstExec) {
+
+	char fileSizeSTR[32];
+	int indexData, sizeData, fileSize;
+	FILE* file;
+
+	if (*firstExec) {
+		if (sscanf(&response[6], "%s", fileName) != 1){   // get the filename
+			printf("Usage: request n t W1 W2 ... Wn OR request n f filename\n");
+			perror("Failed to get filename");
+			return;
+		}
+		file = fopen(fileName, "rb");
+		fseek(file, 0, SEEK_END); // Seek to the end of the file
+		*leftInFile = ftell(file); // Get the size from the end position
+		rewind(file);             // Go back to the start of the file
+		sprintf(fileSizeSTR, "%d", *leftInFile);
+		strcpy(response, fileSizeSTR);
+		strcat(response, " ");
+		printf("%d Bytes to transmit\n", *leftInFile);
+		indexData = strlen(response) - 1;
+		sizeData = BUFFER_SIZE - indexData;
+		fwrite(&response[indexData], 1, sizeData, file);
+		*leftInFile -= sizeData;
+		*firstExec = 0;
+	}
+	else {
+		memset(response, (int)'\0', BUFFER_SIZE); // initializing the buffer with /0
+		file = fopen(fileName, "rb");
+
+		fseek(file, -(*leftInFile), SEEK_END); // Seek to the end of the file
+		fread(response, 1, min(BUFFER_SIZE, *leftInFile), file);
+		printf("%d\n", min(BUFFER_SIZE, *leftInFile));
+		if (*leftInFile <= BUFFER_SIZE) {
+			*doWrite = 0;
+		}
+		*leftInFile -= BUFFER_SIZE;
+	}
+	fclose(file);
+}
